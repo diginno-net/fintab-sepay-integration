@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/schemas/config.json",
+  "agents": {
+    "directory": ".opencode/agents"
+  },
+  "workspace": {
+    "name": "fintab-sepay-integration",
+    "description": "Integration service kết nối Pancake POS với SePay eInvoice API",
+    "repository": "https://github.com/diginno-net/fintab-sepay-integration"
+  }
+}
