@@ -211,7 +211,7 @@ export function InvoiceJobDetail({ job }: { job: InvoiceJobRecord }) {
         </div>
       ) : null}
 
-      <JobActions invoiceJobId={String(job.id)} status={status} />
+      <JobActions invoiceJobId={String(job.id)} status={status} invoiceNumber={typeof job.invoice_number === 'string' ? job.invoice_number : undefined} />
 
       {payload ? (
         <details className="rounded-2xl border border-zinc-200">
