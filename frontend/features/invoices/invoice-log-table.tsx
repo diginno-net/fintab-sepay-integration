@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Badge } from '@/components/status/badge';
 import { Button } from '@/components/forms/button';
-import { listInvoiceJobs, retryInvoiceJob } from '@/features/invoices/api';
+import { listInvoiceJobsClient, retryInvoiceJobClient } from '@/features/invoices/api-client';
 import Link from 'next/link';
 
 type InvoiceJob = {
@@ -60,7 +60,7 @@ export function InvoiceLogTable({ jobs, onRetry, className = '' }: InvoiceLogTab
   const handleRetry = async (jobId: string) => {
     setRetryingIds(new Set([...retryingIds, jobId]));
     try {
-      await retryInvoiceJob(jobId);
+      await retryInvoiceJobClient(jobId);
       onRetry?.(jobId);
     } catch (err) {
       console.error('Retry failed:', err);

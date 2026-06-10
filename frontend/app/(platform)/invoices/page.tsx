@@ -7,7 +7,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { Tabs } from '@/components/ui/tabs';
 import { Badge } from '@/components/status/badge';
 import { Button } from '@/components/forms/button';
-import { listInvoiceJobs, retryInvoiceJob } from '@/features/invoices/api';
+import { listInvoiceJobsClient, retryInvoiceJobClient } from '@/features/invoices/api-client';
 import { InvoiceStatsBar } from '@/features/invoices/invoice-stats-bar';
 import { InvoiceTableRow } from '@/features/invoices/invoice-table-row';
 import Link from 'next/link';
@@ -65,7 +65,7 @@ export default function InvoicesPage() {
     async function loadJobs() {
       setLoading(true);
       try {
-        const data = await listInvoiceJobs();
+        const data = await listInvoiceJobsClient();
         setJobs(Array.isArray(data) ? data as InvoiceJob[] : []);
       } catch {
         setJobs([]);
@@ -93,8 +93,8 @@ export default function InvoicesPage() {
 
   const handleRetry = async (jobId: string) => {
     try {
-      await retryInvoiceJob(jobId);
-      const data = await listInvoiceJobs();
+      await retryInvoiceJobClient(jobId);
+      const data = await listInvoiceJobsClient();
       setJobs(Array.isArray(data) ? data as InvoiceJob[] : []);
     } catch (err) {
       console.error('Retry failed:', err);

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { SectionCard } from '@/components/layout/section-card';
 import { Tabs } from '@/components/ui/tabs';
 import { getJob, listJobs } from '@/features/jobs/api';
-import { getInvoiceJob, listInvoiceJobs } from '@/features/invoices/api';
+import { getInvoiceJobClient, listInvoiceJobsClient } from '@/features/invoices/api-client';
 import { InvoiceJobDetail } from '@/features/invoices/invoice-job-detail';
 import { BackgroundJobDetail } from '@/features/jobs/background-job-detail';
 import { InvoiceLogTable } from '@/features/invoices/invoice-log-table';
@@ -40,7 +40,7 @@ export default function JobsPage({
       try {
         const [jobs, invoices] = await Promise.all([
           listJobs({}).catch(() => []),
-          listInvoiceJobs().catch(() => [])
+          listInvoiceJobsClient().catch(() => [])
         ]);
         setBackgroundJobs(Array.isArray(jobs) ? jobs as BackgroundJob[] : []);
         setInvoiceJobs(Array.isArray(invoices) ? invoices as Record<string, unknown>[] : []);
@@ -52,7 +52,7 @@ export default function JobsPage({
   }, []);
 
   const handleRetry = async (jobId: string) => {
-    const data = await listInvoiceJobs().catch(() => []);
+    const data = await listInvoiceJobsClient().catch(() => []);
     setInvoiceJobs(Array.isArray(data) ? data as Record<string, unknown>[] : []);
   };
 

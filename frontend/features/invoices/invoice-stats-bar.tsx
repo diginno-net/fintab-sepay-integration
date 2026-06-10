@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { StatCard } from '@/components/ui/stat-card';
-import { listInvoiceJobs } from '@/features/invoices/api';
+import { listInvoiceJobsClient } from '@/features/invoices/api-client';
 
 type InvoiceStats = {
   total: number;
@@ -23,7 +23,7 @@ export function InvoiceStatsBar({ shopId, className = '' }: InvoiceStatsBarProps
   useEffect(() => {
     async function fetchStats() {
       try {
-        const jobs = await listInvoiceJobs();
+        const jobs = await listInvoiceJobsClient();
         const jobArray = Array.isArray(jobs) ? jobs : (jobs as { data?: unknown[] })?.data || [];
         
         let filtered = jobArray;

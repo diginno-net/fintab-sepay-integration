@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Badge } from '@/components/status/badge';
 import { Button } from '@/components/forms/button';
-import { listInvoiceJobs, getInvoiceJob } from '@/features/invoices/api';
+import { listInvoiceJobsClient, getInvoiceJobClient } from '@/features/invoices/api-client';
 import { downloadArtifact } from '@/features/invoices/download-artifact';
 import Link from 'next/link';
 
@@ -45,7 +45,7 @@ export function OrderInvoicePanel({ orderId, shopId, className = '' }: OrderInvo
   useEffect(() => {
     async function loadInvoices() {
       try {
-        const jobs = await listInvoiceJobs();
+        const jobs = await listInvoiceJobsClient();
         const jobArray = Array.isArray(jobs) ? jobs as InvoiceJob[] : [];
         const orderInvoices = jobArray.filter(j => j.source_order_id === orderId);
         setInvoiceJobs(orderInvoices);
@@ -60,7 +60,7 @@ export function OrderInvoicePanel({ orderId, shopId, className = '' }: OrderInvo
 
   const handleDownloadPDF = async (invoiceJobId: string) => {
     try {
-      const data = await getInvoiceJob(invoiceJobId);
+      const data = await getInvoiceJobClient(invoiceJobId);
       const job = data as Record<string, unknown>;
       if (job.status === 'issued') {
         await downloadArtifact(invoiceJobId, {});
