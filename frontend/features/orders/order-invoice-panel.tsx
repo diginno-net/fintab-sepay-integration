@@ -42,6 +42,7 @@ const STATUS_LABELS: Record<string, string> = {
 export function OrderInvoicePanel({ orderId, shopId, className = '' }: OrderInvoicePanelProps) {
   const [invoiceJobs, setInvoiceJobs] = useState<InvoiceJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadInvoices() {
@@ -60,11 +61,12 @@ export function OrderInvoicePanel({ orderId, shopId, className = '' }: OrderInvo
   }, [orderId]);
 
   const handleDownloadPDF = async (invoiceJobId: string) => {
+    setDownloadError(null);
     try {
       const artifact = await apiFetch<Parameters<typeof downloadArtifact>[1]>(`/v1/invoices/jobs/${invoiceJobId}/download/pdf`, { method: 'GET' });
       await downloadArtifact(invoiceJobId, artifact);
     } catch (err) {
-      console.error('Download failed:', err);
+      setDownloadError(err instanceof Error ? err.message : 'Không tải được PDF.');
     }
   };
 
@@ -137,6 +139,12 @@ export function OrderInvoicePanel({ orderId, shopId, className = '' }: OrderInvo
               </div>
             </div>
           ))}
+
+          {downloadError && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {downloadError}
+            </div>
+          )}
         </div>
       )}
     </div>

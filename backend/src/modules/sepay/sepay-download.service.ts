@@ -24,21 +24,9 @@ export async function downloadInvoiceNormalized(
   const filename = extractFilename(contentDisposition, type);
   const contentType = response.headers.get('content-type') ?? (type === 'pdf' ? 'application/pdf' : 'application/xml');
 
-  const text = await response.text().catch(() => '');
-
-  if (looksLikeUrl(text)) {
-    return { type: 'url', url: text.trim(), contentType, filename };
-  }
-
-  if (looksLikeBase64(text)) {
-    return { type: 'base64', data: text.trim(), contentType, filename };
-  }
-
-  const binaryString = await response.text().catch(() => '');
-  if (binaryString.startsWith('%PDF')) {
-    const base64 = btoa(binaryString);
-    return { type: 'binary', data: base64, contentType, filename };
-  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const text = buffer.toString('utf8');
 
   if (looksLikeJson(text)) {
     const json = JSON.parse(text);
@@ -48,20 +36,17 @@ export async function downloadInvoiceNormalized(
     if (data) return { type: 'base64', data, contentType: type === 'pdf' ? 'application/pdf' : 'application/xml', filename };
   }
 
-    const base64 = btoa(text);
-    return { type: 'base64', data: base64, contentType: type === 'pdf' ? 'application/pdf' : 'application/xml', filename };
+  if (looksLikeUrl(text)) {
+    return { type: 'url', url: text.trim(), contentType, filename };
+  }
+
+  const base64 = buffer.toString('base64');
+  return { type: 'base64', data: base64, contentType, filename };
 }
 
 function looksLikeUrl(text: string): boolean {
   const t = text.trim();
   return t.startsWith('http://') || t.startsWith('https://');
-}
-
-function looksLikeBase64(text: string): boolean {
-  const t = text.trim();
-  if (t.length < 10) return false;
-  if (/^[A-Za-z0-9+/=]{20,}$/.test(t)) return true;
-  return false;
 }
 
 function looksLikeJson(text: string): boolean {
@@ -87,7 +72,7 @@ function extractUrlFromJson(json: unknown, type: 'pdf' | 'xml'): string | null {
   ];
   for (const key of candidates) {
     const val = obj[key];
-    if (typeof val === 'string' && (val.startsWith('http') || looksLikeBase64(val))) {
+    if (typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'))) {
       return val;
     }
   }
@@ -96,7 +81,7 @@ function extractUrlFromJson(json: unknown, type: 'pdf' | 'xml'): string | null {
     const dataObj = d as Record<string, unknown>;
     for (const key of candidates) {
       const val = dataObj[key];
-      if (typeof val === 'string' && (val.startsWith('http') || looksLikeBase64(val))) {
+      if (typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'))) {
         return val;
       }
     }
@@ -110,15 +95,21 @@ function extractDataFromJson(json: unknown, type: 'pdf' | 'xml'): string | null 
   const candidates = ['data', 'base64', 'content', 'bytes'];
   for (const key of candidates) {
     const val = obj[key];
-    if (typeof val === 'string' && looksLikeBase64(val)) return val;
+    if (typeof val === 'string' && isValidBase64(val)) return val;
   }
   const d = obj.data;
   if (d && typeof d === 'object') {
     const dataObj = d as Record<string, unknown>;
     for (const key of candidates) {
       const val = dataObj[key];
-      if (typeof val === 'string' && looksLikeBase64(val)) return val;
+      if (typeof val === 'string' && isValidBase64(val)) return val;
     }
   }
   return null;
+}
+
+function isValidBase64(str: string): boolean {
+  if (str.length < 10) return false;
+  if (/^[A-Za-z0-9+/=]+$/.test(str)) return true;
+  return false;
 }

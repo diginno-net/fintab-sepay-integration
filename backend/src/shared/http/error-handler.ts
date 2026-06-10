@@ -16,7 +16,7 @@ export function errorHandler(error: FastifyError | Error, request: FastifyReques
     return;
   }
 
-  if ('code' in error && (error as Record<string, unknown>).code === 'FST_ERR_CTP_EMPTY_JSON_BODY') {
+  if ('code' in error && (error as unknown as Record<string, unknown>).code === 'FST_ERR_CTP_EMPTY_JSON_BODY') {
     const appError = new AppError('VALIDATION_ERROR', 'Request body cannot be empty', 400);
     void reply.status(400).send(toErrorEnvelope(appError, requestId));
     return;

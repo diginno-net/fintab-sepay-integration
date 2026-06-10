@@ -119,12 +119,6 @@ export function JobActions({ invoiceJobId, status: initialStatus, invoiceNumber 
             <Button type="button" size="sm" disabled={isPending} onClick={() => call('/v1/invoices/issue', 'POST', { invoiceJobId })}>
               Phát hành
             </Button>
-            <Button type="button" variant="secondary" size="sm" disabled={isPending} onClick={() => handleDownload('view')}>
-              Xem PDF
-            </Button>
-            <Button type="button" variant="secondary" size="sm" disabled={isPending} onClick={() => handleDownload('download')}>
-              Tải PDF
-            </Button>
           </>
         )}
         {currentStatus === 'issued' && invoiceNumber && (
