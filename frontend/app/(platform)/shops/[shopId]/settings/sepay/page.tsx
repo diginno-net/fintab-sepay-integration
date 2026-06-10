@@ -6,7 +6,7 @@ import { getSepayConfig } from '@/features/shops/api';
 export default async function SepaySettingsPage({ params }: { params: Promise<{ shopId: string }> }) {
   const { shopId } = await params;
   const config = await getSepayConfig(shopId);
-  const isConnected = config?.has_client_id && config?.has_client_secret;
+  const isConnected = !!(config?.has_client_id && config?.has_client_secret);
 
   return (
     <div className="space-y-6">

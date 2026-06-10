@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { listOrdersClient } from '@/features/orders/api-client';
-import type { PancakeOrder } from '@/features/orders/api';
+import { extractOrderRows, orderId, orderCustomerName, orderTotal, orderDate } from '@/features/orders/order-helpers';
 
 type OrderPickerProps = {
   shopId: string;
@@ -15,14 +15,14 @@ type OrderPickerProps = {
 export function OrderPicker({ shopId, value, onChange, placeholder = 'Tìm kiếm đơn hàng...', className = '' }: OrderPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [orders, setOrders] = useState<PancakeOrder[]>([]);
+  const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const selectedOrder = orders.find((o) => o.id === value);
+  const selectedOrder = orders.find((o) => orderId(o) === value);
 
   const fetchOrders = useCallback(async (query: string) => {
     if (!shopId) return;
@@ -30,8 +30,8 @@ export function OrderPicker({ shopId, value, onChange, placeholder = 'Tìm kiế
     setError(null);
     try {
       const data = await listOrdersClient(shopId, { search: query });
-      setOrders(data.orders || []);
-    } catch (err) {
+      setOrders(extractOrderRows(data));
+    } catch {
       setError('Không thể tải danh sách đơn hàng');
       setOrders([]);
     } finally {
@@ -47,19 +47,11 @@ export function OrderPicker({ shopId, value, onChange, placeholder = 'Tìm kiế
   }, [isOpen, fetchOrders]);
 
   useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (isOpen && search !== undefined) {
-      debounceRef.current = setTimeout(() => {
-        fetchOrders(search);
-      }, 300);
+      debounceRef.current = setTimeout(() => fetchOrders(search), 300);
     }
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search, isOpen, fetchOrders]);
 
   useEffect(() => {
@@ -72,22 +64,17 @@ export function OrderPicker({ shopId, value, onChange, placeholder = 'Tìm kiế
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelect = (orderId: string) => {
-    onChange(orderId);
+  const handleSelect = (id: string) => {
+    onChange(id);
     setIsOpen(false);
     setSearch('');
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  const handleUseDirectId = () => {
+    if (search.trim()) {
+      handleSelect(search.trim());
+      setIsOpen(false);
+    }
   };
 
   return (
@@ -98,7 +85,7 @@ export function OrderPicker({ shopId, value, onChange, placeholder = 'Tìm kiế
         className="flex h-10 w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm transition focus:border-emerald-700 focus:outline-none"
       >
         <span className={selectedOrder ? 'text-zinc-900' : 'text-zinc-400'}>
-          {selectedOrder ? `#${selectedOrder.id} - ${selectedOrder.customer?.name || 'Khách lẻ'}` : placeholder}
+          {selectedOrder ? `#${orderId(selectedOrder)} - ${orderCustomerName(selectedOrder)}` : placeholder}
         </span>
         <span className="text-zinc-500">{isOpen ? '▲' : '▼'}</span>
       </button>
@@ -117,32 +104,40 @@ export function OrderPicker({ shopId, value, onChange, placeholder = 'Tìm kiế
           </div>
 
           <div className="max-h-64 overflow-y-auto">
-            {loading && (
-              <div className="p-4 text-center text-sm text-zinc-500">Đang tải...</div>
+            {loading && <div className="p-4 text-center text-sm text-zinc-500">Đang tải...</div>}
+            {error && <div className="p-4 text-center text-sm text-red-600">{error}</div>}
+
+            {!loading && !error && orders.length === 0 && search.trim() && (
+              <div className="flex flex-col gap-2 p-4">
+                <p className="text-center text-sm text-zinc-500">Không tìm thấy đơn hàng</p>
+                <button
+                  type="button"
+                  onClick={handleUseDirectId}
+                  className="rounded-lg border border-emerald-700 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+                >
+                  Dùng mã đơn &quot;{search.trim()}&quot;
+                </button>
+              </div>
             )}
 
-            {error && (
-              <div className="p-4 text-center text-sm text-red-600">{error}</div>
-            )}
-
-            {!loading && !error && orders.length === 0 && (
+            {!loading && !error && orders.length === 0 && !search.trim() && (
               <div className="p-4 text-center text-sm text-zinc-500">Không tìm thấy đơn hàng</div>
             )}
 
             {!loading && !error && orders.map((order) => (
               <button
-                key={order.id}
+                key={orderId(order)}
                 type="button"
-                onClick={() => handleSelect(order.id)}
+                onClick={() => handleSelect(orderId(order))}
                 className="flex w-full items-center justify-between px-4 py-2.5 text-left hover:bg-zinc-50"
               >
                 <div>
-                  <p className="text-sm font-medium text-zinc-900">#{order.id}</p>
-                  <p className="text-xs text-zinc-500">{order.customer?.name || 'Khách lẻ'}</p>
+                  <p className="text-sm font-medium text-zinc-900">#{orderId(order)}</p>
+                  <p className="text-xs text-zinc-500">{orderCustomerName(order)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-zinc-900">{formatCurrency(order.total || 0)}</p>
-                  <p className="text-xs text-zinc-500">{formatDate(order.created_at || order.updated_at)}</p>
+                  <p className="text-sm font-medium text-zinc-900">{orderTotal(order)} đ</p>
+                  <p className="text-xs text-zinc-500">{orderDate(order)}</p>
                 </div>
               </button>
             ))}

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { SectionCard } from '@/components/layout/section-card';
 import { Tabs } from '@/components/ui/tabs';
-import { getJob, listJobs } from '@/features/jobs/api';
+import { listJobsClient, type JobEntry } from '@/features/jobs/api-client';
 import { getInvoiceJobClient, listInvoiceJobsClient } from '@/features/invoices/api-client';
 import { InvoiceJobDetail } from '@/features/invoices/invoice-job-detail';
 import { BackgroundJobDetail } from '@/features/jobs/background-job-detail';
@@ -28,7 +28,7 @@ export default function JobsPage({
   searchParams: Promise<{ jobId?: string; invoiceJobId?: string; shopId?: string; type?: string; status?: string }>;
 }) {
   const [mode, setMode] = useState<'jobs' | 'logs'>('jobs');
-  const [backgroundJob, setBackgroundJob] = useState<Record<string, unknown> | null>(null);
+  const [backgroundJob, setBackgroundJob] = useState<JobEntry | null>(null);
   const [invoiceJob, setInvoiceJob] = useState<Record<string, unknown> | null>(null);
   const [backgroundJobs, setBackgroundJobs] = useState<BackgroundJob[]>([]);
   const [invoiceJobs, setInvoiceJobs] = useState<Record<string, unknown>[]>([]);
@@ -39,7 +39,7 @@ export default function JobsPage({
       setLoading(true);
       try {
         const [jobs, invoices] = await Promise.all([
-          listJobs({}).catch(() => []),
+          listJobsClient({}).catch(() => []),
           listInvoiceJobsClient().catch(() => [])
         ]);
         setBackgroundJobs(Array.isArray(jobs) ? jobs as BackgroundJob[] : []);

@@ -24,18 +24,18 @@ export function InvoiceStatsBar({ shopId, className = '' }: InvoiceStatsBarProps
     async function fetchStats() {
       try {
         const jobs = await listInvoiceJobsClient();
-        const jobArray = Array.isArray(jobs) ? jobs : (jobs as { data?: unknown[] })?.data || [];
-        
+        const jobArray: Record<string, unknown>[] = Array.isArray(jobs) ? jobs as Record<string, unknown>[] : (jobs as { data?: Record<string, unknown>[] })?.data || [];
+
         let filtered = jobArray;
         if (shopId) {
-          filtered = jobArray.filter((j: Record<string, unknown>) => j.tenant_shop_id === shopId);
+          filtered = jobArray.filter((j) => j.tenant_shop_id === shopId);
         }
 
-        const issued = filtered.filter((j: Record<string, unknown>) => j.status === 'issued').length;
-        const pending = filtered.filter((j: Record<string, unknown>) => 
+        const issued = filtered.filter((j) => j.status === 'issued').length;
+        const pending = filtered.filter((j) =>
           ['draft_create_queued', 'draft_create_polling', 'draft_create_running', 'draft_created', 'issue_queued', 'issue_polling', 'issue_running'].includes(j.status as string)
         ).length;
-        const failed = filtered.filter((j: Record<string, unknown>) => 
+        const failed = filtered.filter((j) =>
           ['failed', 'timeout'].includes(j.status as string)
         ).length;
 

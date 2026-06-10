@@ -5,6 +5,7 @@ import { Badge } from '@/components/status/badge';
 import { Button } from '@/components/forms/button';
 import { listInvoiceJobsClient, getInvoiceJobClient } from '@/features/invoices/api-client';
 import { downloadArtifact } from '@/features/invoices/download-artifact';
+import { apiFetch } from '@/lib/api/client';
 import Link from 'next/link';
 
 type InvoiceJob = {
@@ -60,11 +61,8 @@ export function OrderInvoicePanel({ orderId, shopId, className = '' }: OrderInvo
 
   const handleDownloadPDF = async (invoiceJobId: string) => {
     try {
-      const data = await getInvoiceJobClient(invoiceJobId);
-      const job = data as Record<string, unknown>;
-      if (job.status === 'issued') {
-        await downloadArtifact(invoiceJobId, {});
-      }
+      const artifact = await apiFetch<Parameters<typeof downloadArtifact>[1]>(`/v1/invoices/jobs/${invoiceJobId}/download/pdf`, { method: 'GET' });
+      await downloadArtifact(invoiceJobId, artifact);
     } catch (err) {
       console.error('Download failed:', err);
     }
