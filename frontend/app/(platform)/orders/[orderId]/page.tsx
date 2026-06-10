@@ -1,10 +1,9 @@
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { SectionCard } from '@/components/layout/section-card';
-import { Badge } from '@/components/status/badge';
 import { getCurrentSession } from '@/features/auth/session';
 import { getOrder } from '@/features/orders/api';
-import { OrderDetailClient } from '@/features/orders/order-detail-client';
+import { OrderDetailPageClient } from './order-detail-page-client';
 import Link from 'next/link';
 
 export default async function OrderDetailPage({ params, searchParams }: { params: Promise<{ orderId: string }>; searchParams: Promise<{ shopId?: string }> }) {
@@ -52,10 +51,10 @@ export default async function OrderDetailPage({ params, searchParams }: { params
         description={order && typeof order === 'object' ? (order as Record<string, unknown>).status_name as string ?? 'unknown' : 'unknown'}
       >
         <Link href={`/invoices/preview?shopId=${effectiveShopId}&orderId=${orderId}`} className="rounded-full bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white">
-          Preview Invoice
+          Tạo hóa đơn
         </Link>
       </PageHeader>
-      <OrderDetailClient order={order as Record<string, unknown>} shopId={effectiveShopId} />
+      <OrderDetailPageClient order={order as Record<string, unknown>} shopId={effectiveShopId} orderId={orderId} />
     </div>
   );
 }

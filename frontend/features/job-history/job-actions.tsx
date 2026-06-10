@@ -22,7 +22,7 @@ function isTerminal(s: string): s is JobStatus {
   return TERMINAL_STATUSES.includes(s as JobStatus);
 }
 
-export function JobActions({ invoiceJobId, status: initialStatus }: { invoiceJobId: string; status: string }) {
+export function JobActions({ invoiceJobId, status: initialStatus, invoiceNumber }: { invoiceJobId: string; status: string; invoiceNumber?: string }) {
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,44 +88,55 @@ export function JobActions({ invoiceJobId, status: initialStatus }: { invoiceJob
     });
   }
 
+  const handleCopyInvoiceNumber = async () => {
+    if (invoiceNumber) {
+      try {
+        await navigator.clipboard.writeText(invoiceNumber);
+        setMessage('Đã copy mã hóa đơn!');
+      } catch {
+        setError('Không thể copy');
+      }
+    }
+  };
+
   const terminal = isTerminal(currentStatus);
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm font-semibold text-zinc-700">
-        Status: <span className={currentStatus === 'issued' ? 'text-emerald-700' : currentStatus === 'failed' ? 'text-red-600' : 'text-zinc-900'}>{currentStatus}</span>
-      </p>
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
         {!terminal && (
-          <Button type="button" variant="secondary" disabled={isPending} onClick={() => call('/v1/invoices/jobs/{invoiceJobId}/refresh', 'POST')}>
-            Refresh invoice
+          <Button type="button" variant="secondary" size="sm" disabled={isPending} onClick={() => call('/v1/invoices/jobs/{invoiceJobId}/refresh', 'POST')}>
+            Làm mới
           </Button>
         )}
         {(currentStatus === 'failed' || currentStatus === 'timeout') && (
-          <Button type="button" variant="secondary" disabled={isPending} onClick={() => call('/v1/invoices/jobs/{invoiceJobId}/retry', 'POST')}>
-            Retry
+          <Button type="button" variant="secondary" size="sm" disabled={isPending} onClick={() => call('/v1/invoices/jobs/{invoiceJobId}/retry', 'POST')}>
+            Thử lại
           </Button>
         )}
         {currentStatus === 'draft_created' && (
           <>
-            <Button type="button" disabled={isPending} onClick={() => call('/v1/invoices/issue', 'POST', { invoiceJobId })}>
-              Issue
+            <Button type="button" size="sm" disabled={isPending} onClick={() => call('/v1/invoices/issue', 'POST', { invoiceJobId })}>
+              Phát hành
             </Button>
-            <Button type="button" variant="secondary" disabled={isPending} onClick={() => handleDownload('view')}>
-              View PDF
+            <Button type="button" variant="secondary" size="sm" disabled={isPending} onClick={() => handleDownload('view')}>
+              Xem PDF
             </Button>
-            <Button type="button" variant="secondary" disabled={isPending} onClick={() => handleDownload('download')}>
-              Download PDF
+            <Button type="button" variant="secondary" size="sm" disabled={isPending} onClick={() => handleDownload('download')}>
+              Tải PDF
             </Button>
           </>
         )}
-        {currentStatus === 'issued' && (
+        {currentStatus === 'issued' && invoiceNumber && (
           <>
-            <Button type="button" variant="secondary" disabled={isPending} onClick={() => handleDownload('view')}>
-              View PDF
+            <Button type="button" variant="secondary" size="sm" disabled={isPending} onClick={handleCopyInvoiceNumber}>
+              Copy mã hóa đơn
             </Button>
-            <Button type="button" variant="secondary" disabled={isPending} onClick={() => handleDownload('download')}>
-              Download PDF
+            <Button type="button" variant="secondary" size="sm" disabled={isPending} onClick={() => handleDownload('view')}>
+              Xem PDF
+            </Button>
+            <Button type="button" variant="secondary" size="sm" disabled={isPending} onClick={() => handleDownload('download')}>
+              Tải PDF
             </Button>
           </>
         )}

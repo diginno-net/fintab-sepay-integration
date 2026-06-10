@@ -1,5 +1,8 @@
 'use client';
 
+import type { ReactNode } from 'react';
+import Link from 'next/link';
+
 type MappingWarning = {
   code: string;
   message: string;
@@ -58,7 +61,7 @@ function WarningBadge({ warning }: { warning: MappingWarning }) {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   if (value === null || value === undefined || value === '') return null;
   return (
     <div className="flex justify-between border-b border-zinc-100 py-2.5 text-sm last:border-0">
@@ -74,6 +77,11 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
 
   const hasBlockingWarning = warnings.some(w => w.code === 'TAX_MAPPING_BLOCKED');
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+  const totalTax = items.reduce((sum, item) => {
+    const taxRes = taxResolution.find(t => t.lineNumber === item.line_number);
+    const rate = item.tax_rate ?? taxRes?.taxRate ?? 0;
+    return sum + (item.quantity * item.unit_price * rate / 100);
+  }, 0);
 
   return (
     <div className="space-y-5">
@@ -101,7 +109,7 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
             <InfoRow label="Điện thoại" value={buyer.phone} />
             <InfoRow label="Email" value={buyer.email} />
             <InfoRow label="Địa chỉ" value={buyer.address} />
-            <InfoRow label="Mã số thuế" value={buyer.tax_code} />
+            <InfoRow label="Mã số thuế" value={buyer.tax_code || '-'} />
           </div>
         </div>
 
@@ -121,8 +129,12 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
       </div>
 
       <div className="rounded-2xl border border-zinc-200 bg-white">
-        <div className="border-b border-zinc-100 px-4 py-2.5">
+        <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-2.5">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Sản phẩm ({items.length})</h4>
+          <div className="flex gap-4 text-sm">
+            <span className="text-zinc-500">Tổng: <span className="font-semibold text-zinc-900">{totalAmount.toLocaleString('vi-VN')}</span></span>
+            <span className="text-zinc-500">Thuế: <span className="font-semibold text-emerald-700">{totalTax.toLocaleString('vi-VN')}</span></span>
+          </div>
         </div>
         <table className="w-full text-left text-sm">
           <thead>
@@ -139,6 +151,7 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
           <tbody className="divide-y divide-zinc-100">
             {items.map(item => {
               const taxRes = taxResolution.find(t => t.lineNumber === item.line_number);
+              const lineTotal = item.quantity * item.unit_price;
               return (
                 <tr key={item.line_number} className="align-top">
                   <td className="py-2.5 pr-4 text-zinc-400">{item.line_number}</td>
@@ -146,7 +159,7 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
                   <td className="py-2.5 pr-4 font-medium">{item.item_name}</td>
                   <td className="py-2.5 pr-4 text-right">{item.unit_price.toLocaleString('vi-VN')}</td>
                   <td className="py-2.5 pr-4 text-right">{item.quantity}</td>
-                  <td className="py-2.5 pr-4 text-right font-medium">{(item.quantity * item.unit_price).toLocaleString('vi-VN')}</td>
+                  <td className="py-2.5 pr-4 text-right font-medium">{lineTotal.toLocaleString('vi-VN')}</td>
                   <td className="py-2.5 text-right">
                     {taxRes ? (
                       taxRes.shouldBlock ? (

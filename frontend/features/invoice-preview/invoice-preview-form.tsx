@@ -3,10 +3,12 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/forms/button';
-import { TextInput } from '@/components/forms/input';
 import { SelectInput } from '@/components/forms/select';
+import { OrderPicker } from '@/components/ui/order-picker';
 import { ApiClientError, apiFetch } from '@/lib/api/client';
 import { InvoicePreviewSummary } from './invoice-preview-summary';
+import { listTenantShops } from '@/features/shops/api';
+import { useEffect } from 'react';
 
 export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultShopId: string; defaultOrderId?: string }) {
   const router = useRouter();
@@ -14,14 +16,39 @@ export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultS
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showRaw, setShowRaw] = useState(false);
+  const [shops, setShops] = useState<Array<{ id: string; shop_name: string }>>([]);
+  const [shopId, setShopId] = useState(defaultShopId);
+  const [orderId, setOrderId] = useState(defaultOrderId || '');
+  const [invoiceType, setInvoiceType] = useState<'ban_hang' | 'gtgt'>('ban_hang');
 
-  function previewAction(formData: FormData) {
+  useEffect(() => {
+    async function loadShops() {
+      try {
+        const data = await listTenantShops();
+        setShops(data);
+        if (!defaultShopId && data.length > 0) {
+          setShopId(data[0].id);
+        }
+      } catch {
+        setShops([]);
+      }
+    }
+    loadShops();
+  }, [defaultShopId]);
+
+  async function handlePreview() {
+    if (!shopId || !orderId) {
+      setMessage('Vui lòng chọn cửa hàng và mã đơn hàng');
+      return;
+    }
     setMessage(null);
     setPreview(null);
     startTransition(async () => {
       try {
-        const body = bodyFromForm(formData);
-        const data = await apiFetch<Record<string, unknown>>('/v1/invoices/preview', { method: 'POST', body: JSON.stringify(body) });
+        const data = await apiFetch<Record<string, unknown>>('/v1/invoices/preview', {
+          method: 'POST',
+          body: JSON.stringify({ shopId, orderId, invoiceType })
+        });
         setPreview(data);
       } catch (error) {
         setMessage(error instanceof ApiClientError ? error.message : 'Không tạo được preview.');
@@ -29,14 +56,18 @@ export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultS
     });
   }
 
-  function createDraft() {
-    const form = document.querySelector<HTMLFormElement>('#invoice-preview-form');
-    if (!form) return;
-    const formData = new FormData(form);
+  async function handleCreateDraft() {
+    if (!shopId || !orderId) {
+      setMessage('Vui lòng chọn cửa hàng và mã đơn hàng');
+      return;
+    }
     setMessage(null);
     startTransition(async () => {
       try {
-        const data = await apiFetch<{ backgroundJobId: string; invoiceJob: { id: string } }>('/v1/invoices/create-draft', { method: 'POST', body: JSON.stringify(bodyFromForm(formData)) });
+        const data = await apiFetch<{ backgroundJobId: string; invoiceJob: { id: string } }>('/v1/invoices/create-draft', {
+          method: 'POST',
+          body: JSON.stringify({ shopId, orderId, invoiceType })
+        });
         router.push(`/jobs?invoiceJobId=${data.invoiceJob.id}`);
       } catch (error) {
         setMessage(error instanceof ApiClientError ? error.message : 'Không tạo được draft job.');
@@ -51,19 +82,92 @@ export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultS
 
   return (
     <div className="space-y-6">
-      <form id="invoice-preview-form" action={previewAction} className="grid gap-5 md:grid-cols-[1fr_1fr_auto] md:items-end">
-        <TextInput label="Shop ID" name="shopId" defaultValue={defaultShopId} required />
-        <TextInput label="Pancake order ID" name="orderId" defaultValue={defaultOrderId ?? ''} required />
-        <SelectInput label="Invoice type" name="invoiceType" defaultValue="ban_hang"><option value="ban_hang">Bán hàng</option><option value="gtgt">GTGT</option></SelectInput>
-        <div className="md:col-span-3 flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={isPending}>{isPending ? 'Đang preview...' : 'Preview invoice'}</Button>
-          <Button type="button" variant="secondary" onClick={createDraft} disabled={isPending || !preview || hasBlockingWarning}>Create draft job</Button>
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+        <h3 className="mb-5 text-lg font-semibold text-zinc-950">Tạo hóa đơn điện tử</h3>
+
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-zinc-800">Cửa hàng</label>
+            <select
+              value={shopId}
+              onChange={(e) => setShopId(e.target.value)}
+              className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700"
+            >
+              <option value="">Chọn cửa hàng</option>
+              {shops.map((shop) => (
+                <option key={shop.id} value={shop.id}>{shop.shop_name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-zinc-800">Mã đơn hàng</label>
+            <OrderPicker
+              shopId={shopId}
+              value={orderId}
+              onChange={setOrderId}
+              placeholder="Tìm kiếm đơn hàng..."
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-zinc-800">Loại hóa đơn</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setInvoiceType('ban_hang')}
+                className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                  invoiceType === 'ban_hang'
+                    ? 'border-emerald-700 bg-emerald-50 text-emerald-700'
+                    : 'border-zinc-200 text-zinc-700 hover:border-zinc-300'
+                }`}
+              >
+                Bán hàng
+              </button>
+              <button
+                type="button"
+                onClick={() => setInvoiceType('gtgt')}
+                className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                  invoiceType === 'gtgt'
+                    ? 'border-emerald-700 bg-emerald-50 text-emerald-700'
+                    : 'border-zinc-200 text-zinc-700 hover:border-zinc-300'
+                }`}
+              >
+                GTGT
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <Button onClick={handlePreview} disabled={isPending || !shopId || !orderId}>
+            {isPending ? 'Đang preview...' : 'Xem trước'}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleCreateDraft}
+            disabled={isPending || !preview || hasBlockingWarning || !shopId || !orderId}
+          >
+            Tạo nháp
+          </Button>
           {preview ? (
-            <button type="button" onClick={() => setShowRaw(v => !v)} className="text-sm text-zinc-500 underline">{showRaw ? 'Ẩn JSON' : 'Xem JSON'}</button>
+            <button
+              type="button"
+              onClick={() => setShowRaw(v => !v)}
+              className="text-sm text-zinc-500 underline"
+            >
+              {showRaw ? 'Ẩn JSON' : 'Xem JSON'}
+            </button>
           ) : null}
         </div>
-      </form>
-      {message ? <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{message}</p> : null}
+      </div>
+
+      {message ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {message}
+        </div>
+      ) : null}
+
       {preview ? (
         showRaw ? (
           <details className="rounded-2xl border border-zinc-200 bg-white">
@@ -76,8 +180,4 @@ export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultS
       ) : null}
     </div>
   );
-}
-
-function bodyFromForm(formData: FormData) {
-  return { shopId: formData.get('shopId'), orderId: formData.get('orderId'), invoiceType: formData.get('invoiceType') };
 }
