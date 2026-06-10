@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { SectionCard } from '@/components/layout/section-card';
 import { Tabs } from '@/components/ui/tabs';
@@ -18,21 +19,58 @@ type BackgroundJob = {
   status: string;
   attempts: number;
   max_attempts: number;
+  invoice_job_id: string | null;
   created_at: string;
   updated_at: string;
 };
 
-export default function JobsPage({
-  searchParams
-}: {
-  searchParams: Promise<{ jobId?: string; invoiceJobId?: string; shopId?: string; type?: string; status?: string }>;
-}) {
+function JobsContent() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<'jobs' | 'logs'>('jobs');
   const [backgroundJob, setBackgroundJob] = useState<JobEntry | null>(null);
   const [invoiceJob, setInvoiceJob] = useState<Record<string, unknown> | null>(null);
   const [backgroundJobs, setBackgroundJobs] = useState<BackgroundJob[]>([]);
   const [invoiceJobs, setInvoiceJobs] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const jobId = searchParams.get('jobId');
+  const invoiceJobId = searchParams.get('invoiceJobId');
+
+  const loadJobDetail = useCallback(async () => {
+    if (!jobId && !invoiceJobId) {
+      setBackgroundJob(null);
+      setInvoiceJob(null);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (invoiceJobId) {
+        const inv = await getInvoiceJobClient(invoiceJobId).catch(() => null);
+        setInvoiceJob(inv);
+        setBackgroundJob(null);
+      } else if (jobId) {
+        const bg = await listJobsClient({}).catch(() => []);
+        const found = (Array.isArray(bg) ? bg : []).find((j: JobEntry) => j.id === jobId) as JobEntry | undefined;
+        setBackgroundJob(found ?? null);
+        if (found?.invoice_job_id) {
+          const inv = await getInvoiceJobClient(found.invoice_job_id).catch(() => null);
+          setInvoiceJob(inv);
+        } else {
+          setInvoiceJob(null);
+        }
+      }
+    } catch {
+      setBackgroundJob(null);
+      setInvoiceJob(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [jobId, invoiceJobId]);
+
+  useEffect(() => {
+    loadJobDetail();
+  }, [loadJobDetail]);
 
   useEffect(() => {
     async function loadData() {
@@ -42,7 +80,7 @@ export default function JobsPage({
           listJobsClient({}).catch(() => []),
           listInvoiceJobsClient().catch(() => [])
         ]);
-        setBackgroundJobs(Array.isArray(jobs) ? jobs as BackgroundJob[] : []);
+        setBackgroundJobs(Array.isArray(jobs) ? jobs as unknown as BackgroundJob[] : []);
         setInvoiceJobs(Array.isArray(invoices) ? invoices as Record<string, unknown>[] : []);
       } finally {
         setLoading(false);
@@ -51,7 +89,7 @@ export default function JobsPage({
     loadData();
   }, []);
 
-  const handleRetry = async (jobId: string) => {
+  const handleRetry = async () => {
     const data = await listInvoiceJobsClient().catch(() => []);
     setInvoiceJobs(Array.isArray(data) ? data as Record<string, unknown>[] : []);
   };
@@ -66,9 +104,25 @@ export default function JobsPage({
         description={
           currentMode === 'invoice'
             ? 'Theo dõi hóa đơn nháp và phát hành.'
+            : currentMode === 'background'
+            ? 'Background job detail.'
             : 'Theo dõi background jobs, retry và check status.'
         }
       />
+
+      {(backgroundJob || invoiceJob) && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setBackgroundJob(null);
+              setInvoiceJob(null);
+            }}
+            className="text-sm text-zinc-500 hover:text-zinc-700"
+          >
+            ← Quay lại danh sách
+          </button>
+        </div>
+      )}
 
       <div className="border-b border-zinc-200">
         <Tabs
@@ -175,7 +229,15 @@ export default function JobsPage({
                         <td className="py-3">{job.attempts}/{job.max_attempts}</td>
                         <td className="py-3 text-zinc-500">{new Date(job.created_at).toLocaleDateString('vi-VN')}</td>
                         <td>
-                          <Link className="font-semibold text-emerald-800" href={`/jobs?jobId=${job.id}`}>Open</Link>
+                          {job.invoice_job_id ? (
+                            <Link className="font-semibold text-emerald-800" href={`/jobs?invoiceJobId=${job.invoice_job_id}`}>
+                              Mở hóa đơn
+                            </Link>
+                          ) : (
+                            <Link className="font-semibold text-emerald-800" href={`/jobs?jobId=${job.id}`}>
+                              Open
+                            </Link>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -187,5 +249,13 @@ export default function JobsPage({
         </>
       )}
     </div>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-zinc-500">Đang tải...</div>}>
+      <JobsContent />
+    </Suspense>
   );
 }
