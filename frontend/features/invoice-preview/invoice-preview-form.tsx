@@ -7,7 +7,7 @@ import { SelectInput } from '@/components/forms/select';
 import { OrderPicker } from '@/components/ui/order-picker';
 import { ApiClientError, apiFetch } from '@/lib/api/client';
 import { InvoicePreviewSummary } from './invoice-preview-summary';
-import { listTenantShops } from '@/features/shops/api';
+import { listTenantShopsClient } from '@/features/shops/api-client';
 import { useEffect } from 'react';
 
 export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultShopId: string; defaultOrderId?: string }) {
@@ -24,7 +24,7 @@ export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultS
   useEffect(() => {
     async function loadShops() {
       try {
-        const data = await listTenantShops();
+        const data = await listTenantShopsClient();
         setShops(data);
         if (!defaultShopId && data.length > 0) {
           setShopId(data[0].id);

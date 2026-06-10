@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Tabs } from '@/components/ui/tabs';
 import { SelectInput } from '@/components/forms/select';
 import { TextInput } from '@/components/forms/input';
-import { listTenantShops } from '@/features/shops/api';
+import { listTenantShopsClient } from '@/features/shops/api-client';
 
 type InvoiceFiltersProps = {
   shopId?: string;
@@ -37,7 +37,7 @@ export function InvoiceFilters({ shopId, status = 'all', search, onFiltersChange
   useState(() => {
     async function loadShops() {
       try {
-        const data = await listTenantShops();
+        const data = await listTenantShopsClient();
         setShops(data);
       } catch {
         setShops([]);

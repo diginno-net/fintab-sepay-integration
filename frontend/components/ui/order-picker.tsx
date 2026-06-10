@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { listOrders } from '@/features/orders/api';
+import { listOrdersClient } from '@/features/orders/api-client';
 import type { PancakeOrder } from '@/features/orders/api';
 
 type OrderPickerProps = {
@@ -29,7 +29,7 @@ export function OrderPicker({ shopId, value, onChange, placeholder = 'Tìm kiế
     setLoading(true);
     setError(null);
     try {
-      const data = await listOrders({ shopId, search: query, limit: 50 });
+      const data = await listOrdersClient(shopId, { search: query });
       setOrders(data.orders || []);
     } catch (err) {
       setError('Không thể tải danh sách đơn hàng');
