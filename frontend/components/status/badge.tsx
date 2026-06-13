@@ -5,16 +5,16 @@ type BadgeProps = {
 };
 
 const tones = {
-  neutral: 'border-zinc-200 bg-zinc-50 text-zinc-700',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  neutral: 'border-line bg-surface-muted text-muted',
+  success: 'border-accent/25 bg-accent/10 text-accent',
   warning: 'border-amber-200 bg-amber-50 text-amber-800',
   danger: 'border-red-200 bg-red-50 text-red-800'
 };
 
 const variants = {
   default: '',
-  issued: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  draft: 'border-blue-200 bg-blue-50 text-blue-800',
+  issued: 'border-accent/25 bg-accent/10 text-accent',
+  draft: 'border-line bg-surface-muted text-muted',
   pending: 'border-amber-200 bg-amber-50 text-amber-800',
   failed: 'border-red-200 bg-red-50 text-red-800',
 };
@@ -22,5 +22,5 @@ const variants = {
 export function Badge({ children, tone = 'neutral', variant = 'default' }: BadgeProps) {
   const toneStyle = tones[tone];
   const variantStyle = variant !== 'default' ? variants[variant] : '';
-  return <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${variantStyle || toneStyle}`}>{children}</span>;
+  return <span className={`inline-flex min-h-7 items-center rounded-md border px-2.5 py-1 text-xs font-semibold leading-none ${variantStyle || toneStyle}`}>{children}</span>;
 }

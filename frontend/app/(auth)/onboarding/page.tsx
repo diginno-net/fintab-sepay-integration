@@ -6,12 +6,12 @@ export default async function OnboardingPage() {
   const session = await getCurrentSession();
 
   return (
-    <main className="min-h-[100dvh] bg-[#f7f6f2] px-6 py-10">
-      <div className="mx-auto max-w-3xl space-y-8">
+    <main className="min-h-[100dvh] bg-canvas px-6 py-10 text-ink">
+      <div className="mx-auto flex max-w-4xl flex-col gap-8">
         <div>
-          <p className="mb-1 text-sm font-medium uppercase tracking-[0.1em] text-emerald-700">Setup</p>
-          <h1 className="text-3xl font-bold text-zinc-900">Welcome aboard</h1>
-          <p className="mt-2 text-zinc-600">Hoàn tất cấu hình để bắt đầu sử dụng nền tảng.</p>
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-accent">Thiết lập</p>
+          <h1 className="text-4xl font-semibold tracking-[-0.055em] text-ink">Chào mừng bạn</h1>
+          <p className="mt-3 max-w-2xl text-muted">Hoàn tất cấu hình để bắt đầu sử dụng nền tảng.</p>
         </div>
         <SectionCard>
           <OnboardingWizard initialTenantName={session?.tenant?.name ?? ''} />

@@ -4,6 +4,7 @@ import { query } from '../../shared/persistence/db.js';
 export type Product = {
   id: string;
   tenant_id: string;
+  tenant_shop_id: string | null;
   source: 'fintab_export' | 'pancake_pos';
   source_product_code: string;
   product_name: string;
@@ -19,6 +20,7 @@ export type Product = {
 
 export type UpsertProductInput = {
   tenantId: string;
+  shopId?: string | null;
   source: 'fintab_export' | 'pancake_pos';
   sourceProductCode: string;
   productName: string;
@@ -35,9 +37,16 @@ export type UpsertProductInput = {
   rawJson?: Record<string, unknown>;
 };
 
-export async function listProducts(tenantId: string, filters: { search?: string; group?: string; status?: string; limit?: number } = {}): Promise<Product[]> {
+export async function listProducts(tenantId: string, filters: { shopId?: string; shopIds?: string[]; search?: string; group?: string; status?: string; limit?: number } = {}): Promise<Product[]> {
   const conditions = ['tenant_id = $1'];
   const params: unknown[] = [tenantId];
+  if (filters.shopId) {
+    params.push(filters.shopId);
+    conditions.push(`(tenant_shop_id = $${params.length} OR (tenant_shop_id IS NULL AND source = 'fintab_export'))`);
+  } else if (filters.shopIds) {
+    params.push(filters.shopIds);
+    conditions.push(`(tenant_shop_id = ANY($${params.length}::uuid[]) OR (tenant_shop_id IS NULL AND source = 'fintab_export'))`);
+  }
   if (filters.status) {
     params.push(filters.status);
     conditions.push(`status = $${params.length}`);
@@ -61,7 +70,17 @@ export async function getProductById(tenantId: string, productId: string): Promi
   return product;
 }
 
-export async function lookupProductByCode(tenantId: string, code: string): Promise<Product | null> {
+export async function lookupProductByCode(tenantId: string, code: string, shopId?: string | null): Promise<Product | null> {
+  if (shopId) {
+    const rows = await query<Product>(
+      `SELECT * FROM products
+       WHERE tenant_id = $1 AND source_product_code = $2 AND (tenant_shop_id = $3 OR tenant_shop_id IS NULL)
+       ORDER BY CASE WHEN tenant_shop_id = $3 THEN 0 ELSE 1 END, updated_at DESC
+       LIMIT 1`,
+      [tenantId, code, shopId]
+    );
+    return rows[0] ?? null;
+  }
   const rows = await query<Product>(
     `SELECT * FROM products
      WHERE tenant_id = $1 AND source_product_code = $2
@@ -72,7 +91,17 @@ export async function lookupProductByCode(tenantId: string, code: string): Promi
   return rows[0] ?? null;
 }
 
-export async function lookupProductByName(tenantId: string, name: string): Promise<Product | null> {
+export async function lookupProductByName(tenantId: string, name: string, shopId?: string | null): Promise<Product | null> {
+  if (shopId) {
+    const rows = await query<Product>(
+      `SELECT * FROM products
+       WHERE tenant_id = $1 AND lower(product_name) = lower($2) AND (tenant_shop_id = $3 OR tenant_shop_id IS NULL)
+       ORDER BY CASE WHEN tenant_shop_id = $3 THEN 0 ELSE 1 END, updated_at DESC
+       LIMIT 1`,
+      [tenantId, name, shopId]
+    );
+    return rows[0] ?? null;
+  }
   const rows = await query<Product>(
     `SELECT * FROM products
      WHERE tenant_id = $1 AND lower(product_name) = lower($2)
@@ -84,13 +113,16 @@ export async function lookupProductByName(tenantId: string, name: string): Promi
 }
 
 export async function upsertProduct(input: UpsertProductInput): Promise<Product> {
+  const conflictTarget = input.shopId
+    ? '(tenant_id, tenant_shop_id, source, source_product_code) WHERE tenant_shop_id IS NOT NULL'
+    : '(tenant_id, source, source_product_code) WHERE tenant_shop_id IS NULL';
   const rows = await query<Product>(
     `INSERT INTO products(
-       tenant_id, source, source_product_code, product_name, product_type, unit, default_invoice_unit,
+       tenant_id, tenant_shop_id, source, source_product_code, product_name, product_type, unit, default_invoice_unit,
        allow_negative_stock, group_code, group_name, warehouse_code, business_category, excise_tax, status, raw_json
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-     ON CONFLICT (tenant_id, source, source_product_code)
-     DO UPDATE SET product_name = EXCLUDED.product_name,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      ON CONFLICT ${conflictTarget}
+      DO UPDATE SET product_name = EXCLUDED.product_name,
                    product_type = EXCLUDED.product_type,
                    unit = EXCLUDED.unit,
                    default_invoice_unit = EXCLUDED.default_invoice_unit,
@@ -103,9 +135,10 @@ export async function upsertProduct(input: UpsertProductInput): Promise<Product>
                    status = EXCLUDED.status,
                    raw_json = EXCLUDED.raw_json,
                    updated_at = now()
-     RETURNING *`,
+      RETURNING *`,
     [
       input.tenantId,
+      input.shopId ?? null,
       input.source,
       input.sourceProductCode,
       input.productName,

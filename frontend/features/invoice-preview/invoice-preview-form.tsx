@@ -9,6 +9,8 @@ import { ApiClientError, apiFetch } from '@/lib/api/client';
 import { InvoicePreviewSummary } from './invoice-preview-summary';
 import { listTenantShopsClient } from '@/features/shops/api-client';
 import { useEffect } from 'react';
+import { InvoiceRequestForm } from './invoice-request-form';
+import { getDraftStatusClient } from '@/features/invoices/invoice-buyer-request-client';
 
 export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultShopId: string; defaultOrderId?: string }) {
   const router = useRouter();
@@ -20,6 +22,9 @@ export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultS
   const [shopId, setShopId] = useState(defaultShopId);
   const [orderId, setOrderId] = useState(defaultOrderId || '');
   const [invoiceType, setInvoiceType] = useState<'ban_hang' | 'gtgt'>('ban_hang');
+  const [requestChanged, setRequestChanged] = useState(false);
+  const [draftOutdated, setDraftOutdated] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadShops() {
@@ -35,6 +40,19 @@ export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultS
     }
     loadShops();
   }, [defaultShopId]);
+
+  useEffect(() => {
+    setPreview(null);
+    setRequestChanged(false);
+    setDraftOutdated(false);
+    setDraftStatus(null);
+    if (shopId && orderId) {
+      getDraftStatusClient(shopId, orderId).then(status => {
+        setDraftOutdated(status.outdated);
+        setDraftStatus(status.draftStatus ?? null);
+      }).catch(() => {});
+    }
+  }, [orderId, shopId]);
 
   async function handlePreview() {
     if (!shopId || !orderId) {
@@ -139,6 +157,16 @@ export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultS
           </div>
         </div>
 
+        {shopId && orderId && (
+          <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+            <InvoiceRequestForm
+              shopId={shopId}
+              orderId={orderId}
+              onChanged={setRequestChanged}
+            />
+          </div>
+        )}
+
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Button onClick={handlePreview} disabled={isPending || !shopId || !orderId}>
             {isPending ? 'Đang preview...' : 'Xem trước'}
@@ -168,10 +196,17 @@ export function InvoicePreviewForm({ defaultShopId, defaultOrderId }: { defaultS
         </div>
       ) : null}
 
+      {draftOutdated && draftStatus ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <p className="font-semibold">Thông tin HĐ đã thay đổi sau khi tạo nháp</p>
+          <p className="mt-1">Nhấn "Tạo nháp" sẽ tạo nháp mới với thông tin hiện tại. Vui lòng tạo lại nháp trước khi phát hành.</p>
+        </div>
+      ) : null}
+
       {preview ? (
         showRaw ? (
           <details className="rounded-2xl border border-zinc-200 bg-white">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-600">Raw JSON</summary>
+            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-600">JSON thô</summary>
             <pre className="max-h-96 overflow-auto px-4 pb-4 text-xs text-zinc-400">{JSON.stringify(preview, null, 2)}</pre>
           </details>
         ) : (

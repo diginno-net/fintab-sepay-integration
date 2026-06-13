@@ -62,6 +62,7 @@ export async function getJobForTenant(tenantId: string, jobId: string): Promise<
 export type ListJobsFilters = {
   limit?: number;
   shopId?: string;
+  shopIds?: string[];
   type?: string;
   status?: string;
   fromDate?: string;
@@ -69,11 +70,15 @@ export type ListJobsFilters = {
 };
 
 export async function listJobsForTenant(tenantId: string, filters: ListJobsFilters = {}): Promise<BackgroundJob[]> {
-  const { limit = 50, shopId, type, status, fromDate, toDate } = filters;
+  const { limit = 50, shopId, shopIds, type, status, fromDate, toDate } = filters;
   const conditions: string[] = ['tenant_id = $1'];
   const params: unknown[] = [tenantId];
   let i = 2;
   if (shopId) { conditions.push(`tenant_shop_id = $${i++}`); params.push(shopId); }
+  if (!shopId && shopIds) {
+    conditions.push(`(tenant_shop_id = ANY($${i++}::uuid[]) OR tenant_shop_id IS NULL)`);
+    params.push(shopIds);
+  }
   if (type) { conditions.push(`type = $${i++}`); params.push(type); }
   if (status) { conditions.push(`status = $${i++}`); params.push(status); }
   if (fromDate) { conditions.push(`created_at >= $${i++}`); params.push(fromDate); }
@@ -85,9 +90,9 @@ export async function listJobsForTenant(tenantId: string, filters: ListJobsFilte
 export async function markJobForRetry(tenantId: string, jobId: string): Promise<BackgroundJob | null> {
   const rows = await query<BackgroundJob>(
     `UPDATE background_jobs
-     SET status = 'queued', run_after = now(), locked_at = NULL, locked_until = NULL, locked_by = NULL, updated_at = now()
-     WHERE tenant_id = $1 AND id = $2 AND status IN ('failed', 'timeout')
-     RETURNING *`,
+      SET status = 'queued', attempts = 0, run_after = now(), locked_at = NULL, locked_until = NULL, locked_by = NULL, dead_lettered_at = NULL, updated_at = now()
+      WHERE tenant_id = $1 AND id = $2 AND status IN ('failed', 'timeout')
+      RETURNING *`,
     [tenantId, jobId]
   );
   return rows[0] ?? null;

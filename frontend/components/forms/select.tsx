@@ -41,28 +41,28 @@ export function SelectInput({ label, error, searchable = false, children, classN
     return (
       <div ref={containerRef}>
         <label className="block">
-          <span className="text-sm font-medium text-zinc-800">{label}</span>
+          <span className="text-sm font-semibold text-ink">{label}</span>
           <div className="relative mt-2">
             <button
               type="button"
               onClick={() => setIsOpen(!isOpen)}
-              className={`flex h-12 w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700 ${className}`}
+              className={`flex min-h-11 w-full items-center justify-between rounded-2xl border border-line bg-surface px-4 py-3 text-sm outline-none transition duration-200 focus:border-accent focus:ring-4 focus:ring-accent/10 ${className}`}
             >
-              <span className={internalValue ? 'text-zinc-900' : 'text-zinc-400'}>
+              <span className={internalValue ? 'text-ink' : 'text-muted/70'}>
                 {internalValue ? (options as React.ReactElement<{ children: React.ReactNode; value: string }>[])?.find(o => o.props.value === internalValue)?.props.children : 'Chọn...'}
               </span>
-              <span className="text-zinc-500">{isOpen ? '▲' : '▼'}</span>
+              <span className="text-muted">{isOpen ? '▲' : '▼'}</span>
             </button>
 
             {isOpen && (
-              <div className="absolute z-50 mt-1 w-full rounded-xl border border-zinc-200 bg-white shadow-lg">
-                <div className="border-b border-zinc-100 p-2">
+              <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-line bg-surface shadow-warm">
+                <div className="border-b border-line p-2">
                   <input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Tìm kiếm..."
-                    className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-emerald-700"
+                    className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent focus:ring-4 focus:ring-accent/10"
                     autoFocus
                   />
                 </div>
@@ -76,8 +76,8 @@ export function SelectInput({ label, error, searchable = false, children, classN
                         key={opt.props.value}
                         type="button"
                         onClick={() => handleChange(opt.props.value)}
-                        className={`w-full px-4 py-2.5 text-left text-sm hover:bg-zinc-50 ${
-                          opt.props.value === internalValue ? 'bg-emerald-50 text-emerald-700' : 'text-zinc-900'
+                        className={`w-full px-4 py-2.5 text-left text-sm transition hover:bg-surface-muted ${
+                          opt.props.value === internalValue ? 'bg-accent/10 text-accent' : 'text-ink'
                         }`}
                       >
                         {opt.props.children}
@@ -95,11 +95,12 @@ export function SelectInput({ label, error, searchable = false, children, classN
 
   return (
     <label className="block">
-      <span className="text-sm font-medium text-zinc-800">{label}</span>
+      <span className="text-sm font-semibold text-ink">{label}</span>
       <select
         value={value}
         onChange={onChange}
-        className={`mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700 ${className}`}
+        className={`mt-2 min-h-11 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition duration-200 focus:border-accent focus:ring-4 focus:ring-accent/10 ${className}`}
+        aria-invalid={error ? true : undefined}
         {...props}
       >
         {children}

@@ -9,13 +9,14 @@ type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
 export function TextInput({ label, error, helper, className = '', ...props }: TextInputProps) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-zinc-800">{label}</span>
+      <span className="text-sm font-semibold text-ink">{label}</span>
       <input
-        className={`mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-700 ${className}`}
+        className={`mt-2 min-h-11 w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition duration-200 placeholder:text-muted/60 focus:border-accent focus:ring-4 focus:ring-accent/10 ${error ? 'border-red-300 focus:border-red-600 focus:ring-red-100' : ''} ${className}`}
+        aria-invalid={error ? true : undefined}
         {...props}
       />
       {error ? <span className="mt-2 block text-sm text-red-700">{error}</span> : null}
-      {!error && helper ? <span className="mt-2 block text-sm text-zinc-500">{helper}</span> : null}
+      {!error && helper ? <span className="mt-2 block text-sm text-muted">{helper}</span> : null}
     </label>
   );
 }

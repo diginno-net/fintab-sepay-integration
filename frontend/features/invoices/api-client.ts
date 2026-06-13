@@ -2,8 +2,11 @@
 
 import { apiFetch } from '@/lib/api/client';
 
-export async function listInvoiceJobsClient() {
-  return apiFetch<Array<Record<string, unknown>>>('/v1/invoices/jobs', { cache: 'no-store' });
+export async function listInvoiceJobsClient(input: { shopId?: string } = {}) {
+  const params = new URLSearchParams();
+  if (input.shopId) params.set('shopId', input.shopId);
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  return apiFetch<Array<Record<string, unknown>>>(`/v1/invoices/jobs${suffix}`, { cache: 'no-store' });
 }
 
 export async function getInvoiceJobClient(jobId: string) {

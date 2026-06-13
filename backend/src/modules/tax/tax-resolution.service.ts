@@ -16,6 +16,7 @@ export type OrderItemLike = {
     name?: string | null;
     product_name?: string | null;
     retail_price?: string | number | null;
+    tax_rate?: string | number | null;
     measure_info?: { name?: string | null };
   } | null;
 };
@@ -25,7 +26,7 @@ export type TaxResolution = {
   taxRate: number | null;
   invoiceLineType: number;
   invoiceUnit: string;
-  source: 'product_profile' | 'tenant_profile' | 'shop_default' | 'missing';
+  source: 'product_profile' | 'tenant_profile' | 'variation_info' | 'shop_default' | 'missing';
   warnings: string[];
   shouldBlock: boolean;
 };
@@ -55,7 +56,7 @@ export async function resolveTaxForOrderItem(tenantId: string, shopId: string, i
     item.product_id
   );
   const name = firstString(vi?.name, item.name, item.product_name);
-  const product = code ? await lookupProductByCode(tenantId, code) : name ? await lookupProductByName(tenantId, name) : null;
+  const product = code ? await lookupProductByCode(tenantId, code, shopId) : name ? await lookupProductByName(tenantId, name, shopId) : null;
   const sourceProductCode = product?.source_product_code ?? code;
 
   if (sourceProductCode) {
@@ -67,6 +68,34 @@ export async function resolveTaxForOrderItem(tenantId: string, shopId: string, i
   }
 
   const defaults = await getShopDefaults(tenantId, shopId);
+  if (defaults) {
+    const warnings = [product ? 'Product tax profile missing; using shop default tax' : 'Product not matched; using shop default tax'];
+    if (defaults.unknown_product_policy === 'use_default') {
+      return {
+        product,
+        taxRate: defaults.default_tax_rate,
+        invoiceLineType: 1,
+        invoiceUnit: defaults.default_invoice_unit,
+        source: 'shop_default',
+        warnings,
+        shouldBlock: false
+      };
+    }
+  }
+
+  const variationTaxRate = num(vi?.tax_rate);
+  if (variationTaxRate !== null) {
+    return {
+      product,
+      taxRate: variationTaxRate,
+      invoiceLineType: 1,
+      invoiceUnit: product?.default_invoice_unit ?? firstString(vi?.measure_info?.name) ?? 'cái',
+      source: 'variation_info',
+      warnings: product ? ['Product tax profile missing; using Pancake variation tax rate'] : ['Product not matched; using Pancake variation tax rate'],
+      shouldBlock: false
+    };
+  }
+
   if (defaults) {
     const warnings = [product ? 'Product tax profile missing; using shop default tax' : 'Product not matched; using shop default tax'];
     return {
@@ -126,4 +155,10 @@ function firstString(...values: Array<string | number | null | undefined>): stri
     if (text) return text;
   }
   return null;
+}
+
+function num(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }

@@ -16,8 +16,9 @@ async function cookieHeader() {
   return (await cookies()).toString();
 }
 
-export async function listProducts(query?: { search?: string; status?: string; group?: string }) {
+export async function listProducts(query?: { shopId?: string; search?: string; status?: string; group?: string }) {
   const params = new URLSearchParams();
+  if (query?.shopId) params.set('shopId', query.shopId);
   if (query?.search) params.set('search', query.search);
   if (query?.status) params.set('status', query.status);
   if (query?.group) params.set('group', query.group);

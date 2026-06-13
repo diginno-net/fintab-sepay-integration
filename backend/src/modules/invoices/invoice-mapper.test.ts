@@ -40,6 +40,12 @@ function makeConfig(overrides: Partial<SepayShopConfig> = {}): SepayShopConfig {
     default_tax_rate: null,
     has_credentials: true,
     env: 'sandbox',
+    automation: {
+      dryRun: true,
+      autoCreateInvoice: false,
+      autoIssueInvoice: false,
+      requireAccountantConfirmationBeforeAutoIssue: true
+    },
     ...overrides,
   };
 }
@@ -205,5 +211,39 @@ describe('mapPancakeOrderToInvoicePreview', () => {
       sepayConfig: undefined,
     });
     expect(result.warnings.some(w => w.code === 'SEPAY_CONFIG_NOT_LOADED')).toBe(true);
+  });
+
+  it('maps reference code, currency, total amount, and item discount', async () => {
+    const result = await mapPancakeOrderToInvoicePreview({
+      tenantId: 't1',
+      shopId: 'shop-123456789',
+      order: {
+        id: 'order-9',
+        order_currency: 'USD',
+        total_price_after_sub_discount: 90000,
+        cash: 90000,
+        items: [
+          {
+            item_code: 'SKU-1',
+            item_name: 'Product with discount',
+            quantity: 2,
+            unit_price: 50000,
+            total_discount: 10000
+          }
+        ]
+      },
+      invoiceType: 'ban_hang',
+      sepayConfig: makeConfig(),
+    });
+
+    expect(result.payload.reference_code).toBe('PANCAKE-shop-123-order-9');
+    expect(result.payload.currency).toBe('USD');
+    expect(result.payload.total_amount).toBe(90000);
+    expect(result.payload.items[0]).toMatchObject({
+      item_code: 'SKU-1',
+      item_name: 'Product with discount',
+      before_discount_and_tax_amount: 100000,
+      discount_amount: 10000
+    });
   });
 });

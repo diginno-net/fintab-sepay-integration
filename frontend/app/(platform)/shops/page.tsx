@@ -11,7 +11,7 @@ export default async function ShopsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow="Configuration" title="Shops" description="Quản lý shop Pancake, SePay config và tax defaults theo từng shop." />
+      <PageHeader eyebrow="Cấu hình" title="Cửa hàng" description="Quản lý shop Pancake, cấu hình SePay và thuế mặc định theo từng cửa hàng." />
       <SectionCard title="Tạo shop mới"><CreateShopForm /></SectionCard>
       {shops.length === 0 ? <EmptyState title="Chưa có shop" description="Tạo shop đầu tiên để bắt đầu cấu hình Pancake, SePay và tax mapping." /> : null}
       <div className="grid gap-4 md:grid-cols-2">

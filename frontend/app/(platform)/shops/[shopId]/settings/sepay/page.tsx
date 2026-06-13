@@ -30,8 +30,8 @@ export default async function SepaySettingsPage({ params }: { params: Promise<{ 
         notes={
           <div className="space-y-2 text-sm text-zinc-600">
             <p><strong>Môi trường:</strong> Sandbox để test, Production để phát hành thực.</p>
-            <p><strong>Template:</strong> 1 = GTGT (VAT), 2 = Bán hàng (Commercial).</p>
-            <p><strong>Thuế suất:</strong> Đặt mặc định cho các sản phẩm không có tax profile.</p>
+            <p><strong>Mẫu hóa đơn:</strong> 1 = GTGT, 2 = Bán hàng.</p>
+            <p><strong>Thuế suất:</strong> Đặt mặc định cho các sản phẩm không có hồ sơ thuế.</p>
           </div>
         }
       >

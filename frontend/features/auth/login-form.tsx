@@ -34,7 +34,7 @@ export function LoginForm() {
   }
 
   return (
-    <form action={onSubmit} className="mt-8 space-y-5">
+    <form action={onSubmit} className="mt-8 flex flex-col gap-5">
       <TextInput label="Email" type="email" name="email" autoComplete="email" required />
       <TextInput label="Mật khẩu" type="password" name="password" autoComplete="current-password" required />
       {error ? <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}

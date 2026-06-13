@@ -37,13 +37,13 @@ export function TaxDefaultsForm({ shopId, defaults }: { shopId: string; defaults
   return (
     <form action={save} className="space-y-5">
       <div className="grid gap-5 md:grid-cols-2">
-        <SelectInput label="Default tax rate" name="defaultTaxRate" defaultValue={String(defaults?.default_tax_rate ?? 10)}><option value="-2">Không chịu thuế</option><option value="-1">Không kê khai</option><option value="0">0%</option><option value="5">5%</option><option value="8">8%</option><option value="10">10%</option></SelectInput>
-        <TextInput label="Default invoice unit" name="defaultInvoiceUnit" defaultValue={defaults?.default_invoice_unit ?? 'cái'} />
-        <SelectInput label="Default invoice type" name="defaultInvoiceType" defaultValue={defaults?.default_invoice_type ?? 'ban_hang'}><option value="ban_hang">Bán hàng</option><option value="gtgt">GTGT</option></SelectInput>
-        <SelectInput label="Unknown product policy" name="unknownProductPolicy" defaultValue={defaults?.unknown_product_policy ?? 'warn'}><option value="warn">Warn</option><option value="block">Block</option><option value="use_default">Use default</option></SelectInput>
+        <SelectInput label="Thuế suất mặc định" name="defaultTaxRate" defaultValue={String(defaults?.default_tax_rate ?? 10)}><option value="-2">Không chịu thuế</option><option value="-1">Không kê khai</option><option value="0">0%</option><option value="5">5%</option><option value="8">8%</option><option value="10">10%</option></SelectInput>
+        <TextInput label="Đơn vị hóa đơn mặc định" name="defaultInvoiceUnit" defaultValue={defaults?.default_invoice_unit ?? 'cái'} />
+        <SelectInput label="Loại hóa đơn mặc định" name="defaultInvoiceType" defaultValue={defaults?.default_invoice_type ?? 'ban_hang'}><option value="ban_hang">Bán hàng</option><option value="gtgt">GTGT</option></SelectInput>
+        <SelectInput label="Cách xử lý sản phẩm chưa map" name="unknownProductPolicy" defaultValue={defaults?.unknown_product_policy ?? 'warn'}><option value="warn">Cảnh báo</option><option value="block">Chặn xử lý</option><option value="use_default">Dùng mặc định</option></SelectInput>
       </div>
       {message ? <p className="text-sm text-zinc-600">{message}</p> : null}
-      <Button type="submit" disabled={isPending}>{isPending ? 'Đang lưu...' : 'Lưu tax defaults'}</Button>
+      <Button type="submit" disabled={isPending}>{isPending ? 'Đang lưu...' : 'Lưu cấu hình thuế mặc định'}</Button>
     </form>
   );
 }

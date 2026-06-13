@@ -4,36 +4,9 @@ import Link from 'next/link';
 import { JobActions } from '@/features/job-history/job-actions';
 import { getInvoiceErrorInfo, type InvoiceErrorInfo } from './invoice-error-messages';
 import { Badge } from '@/components/status/badge';
+import { invoiceStatus } from '@/features/operations/status-labels';
 
 type InvoiceJobRecord = Record<string, unknown>;
-
-const STATUS_LABELS: Record<string, string> = {
-  draft_create_queued: 'Đang chờ tạo bản nháp',
-  draft_create_polling: 'Đang chờ SePay tạo bản nháp',
-  draft_create_running: 'Đang tạo bản nháp',
-  draft_created: 'Bản nháp đã tạo',
-  issue_queued: 'Đang chờ phát hành',
-  issue_polling: 'Đang chờ SePay phát hành',
-  issue_running: 'Đang phát hành',
-  issued: 'Đã phát hành',
-  failed: 'Thất bại',
-  timeout: 'Hết thời gian',
-  cancelled: 'Đã hủy',
-};
-
-const STATUS_TONE: Record<string, 'neutral' | 'success' | 'warning' | 'danger'> = {
-  draft_create_queued: 'warning',
-  draft_create_polling: 'warning',
-  draft_create_running: 'warning',
-  draft_created: 'warning',
-  issue_queued: 'warning',
-  issue_polling: 'warning',
-  issue_running: 'warning',
-  issued: 'success',
-  failed: 'danger',
-  timeout: 'danger',
-  cancelled: 'neutral',
-};
 
 const FLOW_STEPS = [
   { key: 'draft_create_queued', label: 'Tạo nháp' },
@@ -43,7 +16,7 @@ const FLOW_STEPS = [
 ];
 
 function label(s: string) {
-  return STATUS_LABELS[s] ?? s;
+  return invoiceStatus(s).label;
 }
 
 function json(v: unknown) {
@@ -57,17 +30,28 @@ function getJobErrorInfo(job: InvoiceJobRecord): InvoiceErrorInfo | null {
   if (errorJson && typeof errorJson === 'object' && 'code' in errorJson) {
     return getInvoiceErrorInfo({
       code: String((errorJson as { code: string }).code),
-      message: (errorJson as { message?: string }).message,
+      message: extractErrorMessage(errorJson),
     });
   }
-  const warnings = json(job.mapping_warnings_json);
-  if (Array.isArray(warnings) && warnings.length > 0) {
-    const firstWarning = warnings[0] as { code?: string; message?: string };
-    if (firstWarning?.code) {
-      return getInvoiceErrorInfo({ code: firstWarning.code, message: firstWarning.message });
-    }
+  if (errorJson && typeof errorJson === 'object') {
+    return {
+      title: 'Luồng xử lý thất bại',
+      message: extractErrorMessage(errorJson) ?? 'Không thể hoàn thành thao tác. Vui lòng thử lại hoặc liên hệ admin.',
+      actionLabel: 'Thử lại'
+    };
   }
   return null;
+}
+
+function extractErrorMessage(errorJson: unknown): string | undefined {
+  if (!errorJson || typeof errorJson !== 'object') return undefined;
+  const root = errorJson as Record<string, unknown>;
+  const details = root.details && typeof root.details === 'object' ? root.details as Record<string, unknown> : null;
+  const providerError = details?.error && typeof details.error === 'object' ? details.error as Record<string, unknown> : null;
+  const providerMessage = providerError?.message;
+  if (typeof providerMessage === 'string' && providerMessage.trim()) return providerMessage.trim();
+  const message = root.message;
+  return typeof message === 'string' && message.trim() ? message.trim() : undefined;
 }
 
 function ErrorGuidance({ info }: { info: InvoiceErrorInfo }) {
@@ -91,6 +75,11 @@ function ErrorGuidance({ info }: { info: InvoiceErrorInfo }) {
       ) : null}
     </div>
   );
+}
+
+function withShopSettingsLink(info: InvoiceErrorInfo, shopId: string | null): InvoiceErrorInfo {
+  if (!shopId || !info.actionHref || !info.actionHref.includes('settings/sepay')) return info;
+  return { ...info, actionHref: `/shops/${shopId}/settings/sepay` };
 }
 
 function InvoiceTimeline({ status }: { status: string }) {
@@ -142,46 +131,57 @@ function InvoiceTimeline({ status }: { status: string }) {
 }
 
 export function InvoiceJobDetail({ job }: { job: InvoiceJobRecord }) {
+  const shopId = typeof job.tenant_shop_id === 'string' ? job.tenant_shop_id : null;
   const warnings = json(job.mapping_warnings_json);
   const payload = json(job.request_payload_json);
   const response = json(job.response_json);
   const errorInfo = getJobErrorInfo(job);
+  const displayErrorInfo = errorInfo ? withShopSettingsLink(errorInfo, shopId) : null;
   const status = String(job.status ?? '');
+  const statusMeta = invoiceStatus(status);
+  const requiresDraftRecreate = Boolean(job.requires_draft_recreate);
 
   return (
     <div className="space-y-6">
       <InvoiceTimeline status={status} />
 
+      {requiresDraftRecreate && status === 'draft_created' ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <p className="font-semibold">Thông tin HĐ đã thay đổi sau khi tạo nháp</p>
+          <p className="mt-1">Vui lòng tạo lại nháp trước khi phát hành để đảm bảo thông tin trên hóa đơn là chính xác.</p>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-          <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Order</p>
-          <Link href={`/orders/${job.source_order_id}`} className="font-mono text-sm font-semibold text-emerald-700 hover:underline">
+        <div className="rounded-xl border border-line bg-surface-muted/60 p-4">
+          <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Đơn hàng</p>
+          <Link href={`/orders/${job.source_order_id}${shopId ? `?shopId=${shopId}` : ''}`} className="font-mono text-sm font-semibold text-emerald-700 hover:underline">
             #{String(job.source_order_id ?? '-')}
           </Link>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+        <div className="rounded-xl border border-line bg-surface-muted/60 p-4">
           <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Loại hóa đơn</p>
           <p className="font-semibold">{job.invoice_type === 'gtgt' ? 'GTGT' : 'Bán hàng'}</p>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+        <div className="rounded-xl border border-line bg-surface-muted/60 p-4">
           <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Trạng thái</p>
-          <Badge tone={STATUS_TONE[status] || 'neutral'}>{label(status)}</Badge>
+          <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
         </div>
         {job.sepay_create_tracking_code ? (
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-            <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Create tracking</p>
+          <div className="rounded-xl border border-line bg-surface-muted/60 p-4">
+            <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Theo dõi tạo nháp</p>
             <p className="font-mono text-xs">{String(job.sepay_create_tracking_code)}</p>
           </div>
         ) : null}
         {job.sepay_reference_code ? (
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-            <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Reference code</p>
+          <div className="rounded-xl border border-line bg-surface-muted/60 p-4">
+            <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Mã tham chiếu</p>
             <p className="font-mono text-xs font-semibold">{String(job.sepay_reference_code)}</p>
           </div>
         ) : null}
         {job.sepay_issue_tracking_code ? (
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-            <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Issue tracking</p>
+          <div className="rounded-xl border border-line bg-surface-muted/60 p-4">
+            <p className="mb-1 text-xs font-medium uppercase tracking-widest text-zinc-400">Theo dõi phát hành</p>
             <p className="font-mono text-xs">{String(job.sepay_issue_tracking_code)}</p>
           </div>
         ) : null}
@@ -193,8 +193,8 @@ export function InvoiceJobDetail({ job }: { job: InvoiceJobRecord }) {
         ) : null}
       </div>
 
-      {(status === 'failed' || status === 'timeout') && errorInfo ? (
-        <ErrorGuidance info={errorInfo} />
+      {(status === 'failed' || status === 'timeout') && displayErrorInfo ? (
+        <ErrorGuidance info={displayErrorInfo} />
       ) : null}
 
       {Array.isArray(warnings) && warnings.length > 0 ? (
@@ -215,13 +215,13 @@ export function InvoiceJobDetail({ job }: { job: InvoiceJobRecord }) {
 
       {payload ? (
         <details className="rounded-2xl border border-zinc-200">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-zinc-700">Payload gửi SePay</summary>
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-zinc-700">Dữ liệu kỹ thuật gửi SePay</summary>
           <pre className="max-h-64 overflow-auto px-4 pb-4 text-xs text-zinc-100">{JSON.stringify(payload, null, 2)}</pre>
         </details>
       ) : null}
       {response ? (
         <details className="rounded-2xl border border-zinc-200">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-zinc-700">Response từ SePay</summary>
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-zinc-700">Dữ liệu kỹ thuật từ SePay</summary>
           <pre className="max-h-64 overflow-auto px-4 pb-4 text-xs text-zinc-100">{JSON.stringify(response, null, 2)}</pre>
         </details>
       ) : null}

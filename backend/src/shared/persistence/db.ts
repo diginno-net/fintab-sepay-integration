@@ -16,3 +16,7 @@ export async function query<T = unknown>(sql: string, params: unknown[] = []): P
 export async function closePool(): Promise<void> {
   await pool.end();
 }
+
+export async function checkDatabaseReady(): Promise<void> {
+  await pool.query('SELECT 1');
+}

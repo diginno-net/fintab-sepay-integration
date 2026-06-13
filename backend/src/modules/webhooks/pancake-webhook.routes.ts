@@ -7,7 +7,8 @@ import { query } from '../../shared/persistence/db.js';
 import { decryptSecret } from '../integrations/secret.service.js';
 import { testPancakeConnection } from '../pancake/pancake.service.js';
 import { pancakeClientForShop } from '../pancake/pancake.service.js';
-import { assertShopBelongsToTenant } from '../tenant/tenant-shop.service.js';
+import { AUDIT_ACTIONS, tryWriteAuditLog } from '../audit/audit.service.js';
+import { assertUserCanAccessShopForAction } from '../tenant/shop-access.service.js';
 import { processPancakeWebhookAutomation } from './webhook-automation.service.js';
 import { persistWebhookInbox, resolveShopForWebhook } from './webhook-inbox.service.js';
 
@@ -33,7 +34,7 @@ export async function registerPancakeWebhookRoutes(app: FastifyInstance): Promis
 
   app.post('/v1/tenant-shops/:shopId/configure-webhook', { preHandler: requirePermission('webhook:configure') }, async request => {
     const { shopId } = validateParams(request, shopParamsSchema);
-    await assertShopBelongsToTenant(request.user!.tenantId, shopId);
+    await assertUserCanAccessShopForAction({ tenantId: request.user!.tenantId, userId: request.user!.id, shopId, action: 'integration:write' });
     const body = validateBody(request, configureWebhookSchema);
     const connection = await testPancakeConnection(request.user!.tenantId, shopId);
     const client = await pancakeClientForShop(request.user!.tenantId, shopId);
@@ -50,6 +51,17 @@ export async function registerPancakeWebhookRoutes(app: FastifyInstance): Promis
        WHERE tenant_id = $1 AND id = $2`,
       [request.user!.tenantId, shopId, { webhook_url: body.webhookUrl, webhook_types: body.webhookTypes, webhook_auto_create_draft: body.autoCreateDraft }]
     );
+    await tryWriteAuditLog({
+      tenantId: request.user!.tenantId,
+      tenantShopId: shopId,
+      actorUserId: request.user!.id,
+      actorType: 'user',
+      action: AUDIT_ACTIONS.WEBHOOK_CONFIGURED,
+      resourceType: 'tenant_shop',
+      resourceId: shopId,
+      metadata: { webhookTypes: body.webhookTypes, autoCreateDraft: body.autoCreateDraft },
+      correlationId: request.id
+    });
     return { data: { ok: true, connection, providerResponse } };
   });
 }

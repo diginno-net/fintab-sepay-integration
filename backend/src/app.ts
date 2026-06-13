@@ -19,6 +19,8 @@ import { errorHandler } from './shared/http/error-handler.js';
 import { getCorrelationId, setCorrelationId } from './shared/observability/correlation-id.js';
 import { loggerRedactPaths, redactUrl } from './shared/observability/redaction.js';
 import { registerOpenApi } from './shared/openapi/openapi.js';
+import { checkDatabaseReady } from './shared/persistence/db.js';
+import { registerOriginGuard } from './shared/security/origin-guard.js';
 
 function requestIdFromHeader(header: string | string[] | undefined): string | undefined {
   if (Array.isArray(header)) return header[0];
@@ -53,6 +55,7 @@ export async function buildApp() {
     addHeadersOnExceeding: { 'x-ratelimit-limit': true, 'x-ratelimit-remaining': true, 'x-ratelimit-reset': true },
     addHeaders: { 'retry-after': true, 'x-ratelimit-limit': true, 'x-ratelimit-remaining': true, 'x-ratelimit-reset': true }
   });
+  await registerOriginGuard(app);
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
   await registerOpenApi(app);
   await registerIdentityRoutes(app);
@@ -92,6 +95,17 @@ export async function buildApp() {
     data: { status: 'ok' },
     meta: { request_id: reply.getHeader('x-request-id')?.toString() ?? request.id }
   }));
+
+  app.get('/v1/ready', async (request, reply) => {
+    try {
+      await checkDatabaseReady();
+      return { data: { status: 'ready', checks: { database: 'ok' } }, meta: { request_id: reply.getHeader('x-request-id')?.toString() ?? request.id } };
+    } catch (error) {
+      request.log.error({ err: error }, 'Readiness check failed');
+      reply.status(503);
+      return { data: { status: 'not_ready', checks: { database: 'failed' } }, meta: { request_id: reply.getHeader('x-request-id')?.toString() ?? request.id } };
+    }
+  });
 
   app.get('/v1/openapi.json', async () => app.swagger());
 

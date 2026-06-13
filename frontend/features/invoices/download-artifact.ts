@@ -15,9 +15,9 @@ function downloadBlob(base64: string, filename: string, contentType?: string) {
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
-  document.body.appendChild(a);
+  if (a instanceof Node) document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  if (a instanceof Node) document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -42,18 +42,34 @@ export async function viewArtifact(invoiceJobId: string, artifact: ArtifactRespo
   throw new Error('Không có file để hiển thị.');
 }
 
-export async function downloadArtifact(invoiceJobId: string, artifact: ArtifactResponse): Promise<void> {
+export async function downloadArtifact(
+  invoiceJobId: string,
+  artifact: ArtifactResponse,
+  forceType?: 'pdf' | 'xml'
+): Promise<void> {
+  const isXml = forceType === 'xml';
+  const defaultExt = isXml ? 'xml' : 'pdf';
+  const defaultFilename = `invoice-${invoiceJobId.slice(0, 8)}.${defaultExt}`;
+
   if (artifact.type === 'url' && artifact.url) {
     const a = document.createElement('a');
     a.href = artifact.url;
-    a.download = getFilename(artifact, `invoice-${invoiceJobId.slice(0, 8)}.pdf`);
+    a.download = getFilename(artifact, defaultFilename);
+    a.target = '_blank';
+    if (a instanceof Node) document.body.appendChild(a);
     a.click();
+    if (a instanceof Node) document.body.removeChild(a);
     return;
   }
+
   if ((artifact.type === 'base64' || artifact.type === 'binary') && artifact.data) {
-    const filename = getFilename(artifact, `invoice-${invoiceJobId.slice(0, 8)}.pdf`);
-    downloadBlob(artifact.data, filename, artifact.contentType);
+    const filename = getFilename(artifact, defaultFilename);
+    const contentType = isXml
+      ? 'application/xml'
+      : (artifact.contentType ?? (defaultExt === 'xml' ? 'application/xml' : 'application/pdf'));
+    downloadBlob(artifact.data, filename, contentType);
     return;
   }
-  throw new Error('Không có file để tải.');
+
+  throw new Error(isXml ? 'Không có file XML để tải.' : 'Không có file để tải.');
 }

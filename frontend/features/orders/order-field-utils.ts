@@ -43,6 +43,8 @@ export type PancakeOrder = {
   items: PancakeOrderItem[];
 };
 
+export type PancakePaymentStatus = 'paid' | 'unpaid' | 'unknown';
+
 export type PancakeOrderItem = {
   id: number;
   product_id: string;
@@ -73,6 +75,31 @@ function num(v: unknown): number | null {
   if (v === null || v === undefined || v === '') return null;
   const p = Number(v);
   return Number.isFinite(p) ? p : null;
+}
+
+export function getPancakePaymentStatus(order: Record<string, unknown>): { status: PancakePaymentStatus; label: string; reason: string; canCreateInvoice: boolean } {
+  const raw = str(order.payment_status ?? order.paymentStatus ?? order.payment_state ?? order.paymentState)?.toLowerCase();
+  if (raw) {
+    if (['paid', 'paid_done', 'success', 'successful', 'completed', 'complete', 'da_thanh_toan', 'đã thanh toán'].includes(raw)) {
+      return { status: 'paid', label: 'Đã thanh toán', reason: 'Pancake xác nhận đã thanh toán', canCreateInvoice: true };
+    }
+    if (['unpaid', 'pending', 'failed', 'cancelled', 'canceled', 'not_paid', 'chua_thanh_toan', 'chưa thanh toán'].includes(raw)) {
+      return { status: 'unpaid', label: 'Chưa thanh toán', reason: 'Pancake báo chưa thanh toán', canCreateInvoice: false };
+    }
+  }
+
+  const moneyToCollect = num(order.money_to_collect ?? order.moneyToCollect);
+  if (moneyToCollect !== null) {
+    if (moneyToCollect <= 0) return { status: 'paid', label: 'Đã thanh toán', reason: 'Đã thu đủ tiền', canCreateInvoice: true };
+    return { status: 'unpaid', label: 'Chưa thanh toán', reason: 'Còn tiền cần thu', canCreateInvoice: false };
+  }
+
+  const cod = num(order.cod);
+  if (cod !== null && cod > 0) {
+    return { status: 'unknown', label: 'Chưa xác định', reason: 'Đơn COD chưa có xác nhận đã thu tiền', canCreateInvoice: false };
+  }
+
+  return { status: 'unknown', label: 'Chưa xác định', reason: 'Thiếu tín hiệu thanh toán từ Pancake', canCreateInvoice: false };
 }
 
 export function extractBuyer(order: PancakeOrder): {
@@ -107,7 +134,8 @@ export function extractPayment(order: PancakeOrder): {
   totalDiscount: string;
   currency: string;
 } {
-  const f = (v: number | null) => (v !== null ? v.toLocaleString('vi-VN') : '0');
+  const currency = str(order.order_currency) ?? 'VND';
+  const f = (v: number | null) => `${(v !== null ? v : 0).toLocaleString('vi-VN')} ${currency}`;
   return {
     totalPrice: f(num(order.total_price)),
     afterDiscount: f(num(order.total_price_after_sub_discount)),
@@ -119,7 +147,7 @@ export function extractPayment(order: PancakeOrder): {
     shippingFee: f(num(order.shipping_fee)),
     surcharge: f(num(order.surcharge)),
     totalDiscount: f(num(order.total_discount)),
-    currency: str(order.order_currency) ?? 'VND'
+    currency
   };
 }
 
@@ -174,8 +202,8 @@ export function extractItems(order: PancakeOrder): Array<{
       displayId: str(vi.display_id ?? vi.product_display_id) ?? '',
       barcode: str(vi.barcode) ?? '',
       quantity: String(item.quantity ?? 1),
-      unitPrice: (vi.retail_price ?? 0).toLocaleString('vi-VN'),
-      totalDiscount: (item.total_discount ?? 0).toLocaleString('vi-VN'),
+      unitPrice: `${(vi.retail_price ?? 0).toLocaleString('vi-VN')} ${str((order as PancakeOrder).order_currency) ?? 'VND'}`,
+      totalDiscount: `${(item.total_discount ?? 0).toLocaleString('vi-VN')} ${str((order as PancakeOrder).order_currency) ?? 'VND'}`,
       taxRate: String(vi.tax_rate ?? 0),
       unit: str(vi.measure_info?.name) ?? 'cái',
       note: str(item.note_product) ?? null

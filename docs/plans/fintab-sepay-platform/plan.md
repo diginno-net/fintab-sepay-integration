@@ -4,7 +4,7 @@
 
 - **Feature slug**: `fintab-sepay-platform`
 - **Created**: 2026-06-09
-- **Status**: ready
+- **Status**: historical-superseded
 - **Priority**: P0
 
 ## Decisions Locked
@@ -13,7 +13,7 @@
 |---|---|
 | Repo structure | Monorepo: `backend/` + `frontend/` |
 | Backend stack | Fastify + PostgreSQL + Zod + OpenAPI |
-| Job queue | pg-boss + PostgreSQL |
+| Job queue | Custom PostgreSQL `background_jobs` queue; pg-boss deferred |
 | Frontend stack | Next.js App Router + RSC + Tailwind CSS |
 | Icon package | `@phosphor-icons/react` |
 | Motion | Framer Motion, limited to isolated Client Components |
@@ -41,7 +41,7 @@ Frontend Next.js App Router
 -> Auth + Tenant Context + RBAC
 -> Pancake/SePay integration modules
 -> Invoice Mapper + State Machine
--> pg-boss Workers
+-> Custom PostgreSQL background_jobs worker
 -> PostgreSQL
 -> Audit + Job History
 ```
@@ -72,7 +72,7 @@ Frontend Next.js App Router
 | TENANT-001 | Implement tenant and shop context | pending | 60m | AUTH-001 |
 | RBAC-001 | Implement RBAC permissions | pending | 45m | TENANT-001 |
 | AUDIT-001 | Implement audit logging | pending | 45m | RBAC-001 |
-| JOB-001 | Implement pg-boss job infrastructure | pending | 60m | DB-001 |
+| JOB-001 | Implement PostgreSQL background job infrastructure | superseded-by-custom-queue | 60m | DB-001 |
 | INT-001 | Implement secret encryption and redaction | pending | 50m | BE-001 |
 | INT-002 | Implement Pancake shop configuration | pending | 60m | TENANT-001, INT-001 |
 | INT-003 | Implement SePay configuration | pending | 60m | TENANT-001, INT-001 |

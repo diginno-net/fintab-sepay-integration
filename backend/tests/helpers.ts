@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
+import { hashPassword } from '../src/shared/auth/password.js';
 
 const { Pool } = pg;
 
 let _pool: pg.Pool | null = null;
 const TEST_PASSWORD = 'testpassword123';
-const TEST_PASSWORD_HASH = 'scrypt$7598cff20d4ceb37afe248703476147e$3d6032fd373373adc8116d868151a38cb6fa0a4e7eb91eb50c89fb8e404bfaca0d6ed0fc9f306aff3042ede3f4c4591a44e15e4c97aa372d78996776d8f75e78';
 
 function getPool(): pg.Pool {
   if (!_pool) {
@@ -39,14 +39,25 @@ export async function createTestUser(
   role: string
 ): Promise<{ id: string; email: string; tenantId: string; role: string; password: string }> {
   const id = randomUUID();
+  const passwordHash = await hashPassword(TEST_PASSWORD);
   await queryAll(
     'INSERT INTO users (id, email, name, password_hash, status) VALUES ($1, $2, $3, $4, $5)',
-    [id, email, name, TEST_PASSWORD_HASH, 'active']
+    [id, email, name, passwordHash, 'active']
   );
   await queryAll(
     'INSERT INTO memberships (id, user_id, tenant_id, role) VALUES ($1, $2, $3, $4)',
     [randomUUID(), id, tenantId, role]
   );
+  if (['owner', 'admin'].includes(role)) {
+    await queryAll(
+      `INSERT INTO user_shop_access (id, tenant_id, user_id, tenant_shop_id, access_level, is_default)
+       SELECT gen_random_uuid(), $2, $1, id, 'admin', row_number() OVER (ORDER BY created_at ASC) = 1
+       FROM tenant_shops
+       WHERE tenant_id = $2
+       ON CONFLICT (tenant_id, user_id, tenant_shop_id) DO NOTHING`,
+      [id, tenantId]
+    );
+  }
   return { id, email, tenantId, role, password: TEST_PASSWORD };
 }
 

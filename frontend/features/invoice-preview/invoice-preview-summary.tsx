@@ -19,10 +19,14 @@ type TaxResolutionItem = {
 
 type Buyer = {
   name: string;
+  type?: string;
   phone: string | null;
   email: string | null;
   address: string | null;
   tax_code?: string | null;
+  legal_name?: string | null;
+  identity_number?: string | null;
+  buyer_code?: string | null;
 };
 
 type InvoiceItem = {
@@ -33,6 +37,8 @@ type InvoiceItem = {
   unit: string;
   quantity: number;
   unit_price: number;
+  discount_amount?: number;
+  before_discount_and_tax_amount?: number;
   tax_rate?: number;
 };
 
@@ -41,6 +47,8 @@ type InvoicePreviewResponse = {
     template_code: string;
     currency: string;
     payment_method: string;
+    reference_code?: string;
+    total_amount?: number;
     is_draft: boolean;
     buyer: Buyer;
     items: InvoiceItem[];
@@ -76,7 +84,9 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
   const { buyer, items, payment_method, notes } = payload;
 
   const hasBlockingWarning = warnings.some(w => w.code === 'TAX_MAPPING_BLOCKED');
-  const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+  const totalBeforeDiscount = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+  const totalDiscount = items.reduce((sum, item) => sum + (item.discount_amount ?? 0), 0);
+  const totalAmount = payload.total_amount ?? (totalBeforeDiscount - totalDiscount);
   const totalTax = items.reduce((sum, item) => {
     const taxRes = taxResolution.find(t => t.lineNumber === item.line_number);
     const rate = item.tax_rate ?? taxRes?.taxRate ?? 0;
@@ -105,11 +115,20 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
             <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Người mua</h4>
           </div>
           <div className="divide-y divide-zinc-100 px-4">
+            <InfoRow label="Loại" value={
+              buyer.type === 'company' ? (
+                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">Công ty</span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700">Cá nhân</span>
+              )
+            } />
             <InfoRow label="Tên" value={buyer.name} />
+            {buyer.type === 'company' && buyer.legal_name ? <InfoRow label="Tên pháp lý" value={buyer.legal_name} /> : null}
+            {buyer.type === 'company' ? <InfoRow label="Mã số thuế" value={buyer.tax_code || '-'} /> : null}
+            {buyer.type !== 'company' && buyer.identity_number ? <InfoRow label="CCCD/ĐDCN" value={buyer.identity_number} /> : null}
             <InfoRow label="Điện thoại" value={buyer.phone} />
             <InfoRow label="Email" value={buyer.email} />
             <InfoRow label="Địa chỉ" value={buyer.address} />
-            <InfoRow label="Mã số thuế" value={buyer.tax_code || '-'} />
           </div>
         </div>
 
@@ -121,7 +140,9 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
             <InfoRow label="Loại" value={payload.template_code === '1' ? 'GTGT' : 'Bán hàng'} />
             <InfoRow label="Thanh toán" value={payment_method} />
             <InfoRow label="Tiền tệ" value={payload.currency} />
+            <InfoRow label="Mã tham chiếu" value={payload.reference_code} />
             <InfoRow label="Số sản phẩm" value={items.length} />
+            {totalDiscount > 0 ? <InfoRow label="Chiết khấu" value={`${totalDiscount.toLocaleString('vi-VN')} ${payload.currency}`} /> : null}
             <InfoRow label="Tổng tiền" value={<span className="font-semibold text-emerald-700">{totalAmount.toLocaleString('vi-VN')} {payload.currency}</span>} />
             {notes ? <InfoRow label="Ghi chú" value={notes} /> : null}
           </div>
@@ -144,6 +165,7 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
               <th className="py-2.5 pr-4">Tên</th>
               <th className="py-2.5 pr-4 text-right">Đơn giá</th>
               <th className="py-2.5 pr-4 text-right">SL</th>
+              <th className="py-2.5 pr-4 text-right">CK</th>
               <th className="py-2.5 pr-4 text-right">Thành tiền</th>
               <th className="py-2.5 text-right">Thuế</th>
             </tr>
@@ -151,7 +173,8 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
           <tbody className="divide-y divide-zinc-100">
             {items.map(item => {
               const taxRes = taxResolution.find(t => t.lineNumber === item.line_number);
-              const lineTotal = item.quantity * item.unit_price;
+              const lineDiscount = item.discount_amount ?? 0;
+              const lineTotal = item.quantity * item.unit_price - lineDiscount;
               return (
                 <tr key={item.line_number} className="align-top">
                   <td className="py-2.5 pr-4 text-zinc-400">{item.line_number}</td>
@@ -159,6 +182,7 @@ export function InvoicePreviewSummary({ data }: { data: InvoicePreviewResponse }
                   <td className="py-2.5 pr-4 font-medium">{item.item_name}</td>
                   <td className="py-2.5 pr-4 text-right">{item.unit_price.toLocaleString('vi-VN')}</td>
                   <td className="py-2.5 pr-4 text-right">{item.quantity}</td>
+                  <td className="py-2.5 pr-4 text-right text-amber-700">{lineDiscount > 0 ? lineDiscount.toLocaleString('vi-VN') : '—'}</td>
                   <td className="py-2.5 pr-4 text-right font-medium">{lineTotal.toLocaleString('vi-VN')}</td>
                   <td className="py-2.5 text-right">
                     {taxRes ? (

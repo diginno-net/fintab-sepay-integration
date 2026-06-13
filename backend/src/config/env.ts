@@ -17,7 +17,35 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  return envSchema.parse(source);
+  const parsed = envSchema.parse(source);
+  validateProductionEnv(parsed, source);
+  return parsed;
 }
 
 export const env = loadEnv();
+
+function validateProductionEnv(parsed: Env, source: NodeJS.ProcessEnv): void {
+  if (parsed.NODE_ENV !== 'production') return;
+
+  const issues: string[] = [];
+  if (!sourceHasValue(source, 'DATABASE_URL')) issues.push('DATABASE_URL is required in production');
+  if (isWeakSecret(parsed.SESSION_SECRET, 'dev-session-secret-change-me')) issues.push('SESSION_SECRET must be a strong production secret');
+  if (isWeakSecret(parsed.ENCRYPTION_MASTER_KEY, 'dev-encryption-key-change-me')) issues.push('ENCRYPTION_MASTER_KEY must be a strong production secret');
+
+  const origins = parsed.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean);
+  if (origins.length === 0 || origins.some(origin => origin === '*' || origin.startsWith('http://localhost'))) {
+    issues.push('CORS_ORIGIN must be explicit production HTTPS origin(s)');
+  }
+
+  if (issues.length > 0) {
+    throw new Error(`Invalid production environment: ${issues.join('; ')}`);
+  }
+}
+
+function sourceHasValue(source: NodeJS.ProcessEnv, key: string): boolean {
+  return typeof source[key] === 'string' && source[key]!.trim().length > 0;
+}
+
+function isWeakSecret(value: string, defaultValue: string): boolean {
+  return value === defaultValue || value.length < 32;
+}

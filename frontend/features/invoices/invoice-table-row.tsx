@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/status/badge';
 import { Button } from '@/components/forms/button';
+import { invoiceStatus } from '@/features/operations/status-labels';
 
 type InvoiceJob = {
   id: string;
@@ -24,20 +25,6 @@ type InvoiceTableRowProps = {
   className?: string;
 };
 
-const STATUS_CONFIG: Record<string, { label: string; tone: 'neutral' | 'success' | 'warning' | 'danger' }> = {
-  draft_create_queued: { label: 'Đang tạo nháp', tone: 'warning' },
-  draft_create_polling: { label: 'Đang tạo nháp', tone: 'warning' },
-  draft_create_running: { label: 'Đang tạo nháp', tone: 'warning' },
-  draft_created: { label: 'Nháp xong', tone: 'warning' },
-  issue_queued: { label: 'Đang phát hành', tone: 'warning' },
-  issue_polling: { label: 'Đang phát hành', tone: 'warning' },
-  issue_running: { label: 'Đang phát hành', tone: 'warning' },
-  issued: { label: 'Đã phát hành', tone: 'success' },
-  failed: { label: 'Thất bại', tone: 'danger' },
-  timeout: { label: 'Hết giờ', tone: 'danger' },
-  cancelled: { label: 'Đã hủy', tone: 'neutral' },
-};
-
 const FLOW_STEPS = [
   'pending',
   'draft_create_queued',
@@ -51,7 +38,7 @@ const FLOW_STEPS = [
 ];
 
 export function InvoiceTableRow({ job, onRetry, className = '' }: InvoiceTableRowProps) {
-  const statusConfig = STATUS_CONFIG[job.status] || { label: job.status, tone: 'neutral' as const };
+  const statusConfig = invoiceStatus(job.status);
   const currentStepIndex = FLOW_STEPS.indexOf(job.status);
   const isInProgress = currentStepIndex > 0 && currentStepIndex < FLOW_STEPS.length - 1;
 
@@ -78,7 +65,7 @@ export function InvoiceTableRow({ job, onRetry, className = '' }: InvoiceTableRo
   return (
     <>
       <td className="px-4 py-3">
-        <Link href={`/orders/${job.source_order_id}`} className="font-medium text-zinc-900 hover:text-emerald-700">
+        <Link href={`/orders/${job.source_order_id}${job.tenant_shop_id ? `?shopId=${job.tenant_shop_id}` : ''}`} className="font-medium text-zinc-900 hover:text-emerald-700">
           #{job.source_order_id}
         </Link>
       </td>
@@ -132,7 +119,7 @@ export function InvoiceTableRow({ job, onRetry, className = '' }: InvoiceTableRo
             <Button size="sm" variant="ghost">Xem</Button>
           </Link>
           {job.status === 'failed' && onRetry && (
-            <Button size="sm" variant="secondary" onClick={handleRetry}>Retry</Button>
+            <Button size="sm" variant="secondary" onClick={handleRetry}>Thử lại</Button>
           )}
           {job.status === 'issued' && (
             <Button size="sm" variant="ghost">PDF</Button>

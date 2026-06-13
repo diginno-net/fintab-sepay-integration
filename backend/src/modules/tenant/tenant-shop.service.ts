@@ -1,5 +1,6 @@
 import { AppError } from '../../shared/http/errors.js';
 import { query } from '../../shared/persistence/db.js';
+import type { PancakePaymentPolicyConfig } from '../pancake/pancake-payment-policy.js';
 
 export type TenantShop = {
   id: string;
@@ -22,4 +23,18 @@ export async function assertShopBelongsToTenant(tenantId: string, shopId: string
   const shop = rows[0];
   if (!shop) throw new AppError('NOT_FOUND', 'Shop not found', 404);
   return shop;
+}
+
+export async function getShopPaymentPolicy(tenantId: string, shopId: string): Promise<PancakePaymentPolicyConfig> {
+  const shop = await assertShopBelongsToTenant(tenantId, shopId);
+  const raw = shop.config_json.paymentPolicy;
+  if (!raw || typeof raw !== 'object') return { mode: 'strict' };
+  const policy = raw as Record<string, unknown>;
+  const mode = policy.mode === 'hybrid' || policy.mode === 'completed_status_as_paid' || policy.mode === 'strict'
+    ? policy.mode
+    : 'strict';
+  const completedStatuses = Array.isArray(policy.completedStatuses)
+    ? policy.completedStatuses.filter(value => typeof value === 'string' || typeof value === 'number')
+    : [];
+  return { mode, completedStatuses };
 }

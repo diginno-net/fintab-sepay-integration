@@ -5,15 +5,54 @@
 :root {
   --font-sans: Arial, Helvetica, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --color-canvas: #f4f0e8;
+  --color-surface: #fffcf5;
+  --color-surface-muted: #f7f2ea;
+  --color-ink: #18181b;
+  --color-muted: #71717a;
+  --color-border: #e6ded2;
+  --color-accent: #1f6f5b;
   color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   min-height: 100dvh;
-  background: #f7f6f2;
-  color: #18181b;
+  background:
+    radial-gradient(circle at top left, rgba(31, 111, 91, 0.08), transparent 32rem),
+    linear-gradient(180deg, #fbf8f1 0%, var(--color-canvas) 38%, #eee7da 100%);
+  color: var(--color-ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  text-rendering: geometricPrecision;
 }
 
 * {
   box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(38, 115, 95, 0.18);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
 }

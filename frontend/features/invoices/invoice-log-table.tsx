@@ -5,9 +5,11 @@ import { Badge } from '@/components/status/badge';
 import { Button } from '@/components/forms/button';
 import { listInvoiceJobsClient, retryInvoiceJobClient } from '@/features/invoices/api-client';
 import Link from 'next/link';
+import { invoiceStatus } from '@/features/operations/status-labels';
 
 type InvoiceJob = {
   id: string;
+  tenant_shop_id?: string;
   source_order_id: string;
   invoice_type: 'gtgt' | 'ban_hang';
   status: string;
@@ -25,20 +27,6 @@ type InvoiceLogTableProps = {
   jobs: InvoiceJob[];
   onRetry?: (jobId: string) => void;
   className?: string;
-};
-
-const STATUS_CONFIG: Record<string, { label: string; tone: 'neutral' | 'success' | 'warning' | 'danger' }> = {
-  draft_create_queued: { label: 'Tạo nháp', tone: 'warning' },
-  draft_create_polling: { label: 'Tạo nháp', tone: 'warning' },
-  draft_create_running: { label: 'Tạo nháp', tone: 'warning' },
-  draft_created: { label: 'Nháp xong', tone: 'warning' },
-  issue_queued: { label: 'Phát hành', tone: 'warning' },
-  issue_polling: { label: 'Phát hành', tone: 'warning' },
-  issue_running: { label: 'Phát hành', tone: 'warning' },
-  issued: { label: 'Đã phát hành', tone: 'success' },
-  failed: { label: 'Thất bại', tone: 'danger' },
-  timeout: { label: 'Hết giờ', tone: 'danger' },
-  cancelled: { label: 'Đã hủy', tone: 'neutral' },
 };
 
 const FLOW_STEPS = ['pending', 'draft_create_queued', 'draft_create_running', 'draft_create_polling', 'draft_created', 'issue_queued', 'issue_running', 'issue_polling', 'issued'];
@@ -111,7 +99,7 @@ export function InvoiceLogTable({ jobs, onRetry, className = '' }: InvoiceLogTab
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {jobs.map((job) => {
-              const statusConfig = STATUS_CONFIG[job.status] || { label: job.status, tone: 'neutral' as const };
+              const statusConfig = invoiceStatus(job.status);
               const currentStepIndex = FLOW_STEPS.indexOf(job.status);
               const isInProgress = currentStepIndex > 0 && currentStepIndex < FLOW_STEPS.length - 1 && job.status !== 'issued';
               const isExpanded = expandedRows.has(job.id);
@@ -129,7 +117,7 @@ export function InvoiceLogTable({ jobs, onRetry, className = '' }: InvoiceLogTab
                       </button>
                     </td>
                     <td className="py-3 px-4">
-                      <Link href={`/orders/${job.source_order_id}`} className="font-medium text-zinc-900 hover:text-emerald-700">
+                      <Link href={`/orders/${job.source_order_id}${job.tenant_shop_id ? `?shopId=${job.tenant_shop_id}` : ''}`} className="font-medium text-zinc-900 hover:text-emerald-700">
                         #{job.source_order_id}
                       </Link>
                       <p className="text-xs text-zinc-500">{job.invoice_type === 'gtgt' ? 'GTGT' : 'Bán hàng'}</p>
@@ -185,7 +173,7 @@ export function InvoiceLogTable({ jobs, onRetry, className = '' }: InvoiceLogTab
                             disabled={retryingIds.has(job.id)}
                             onClick={() => handleRetry(job.id)}
                           >
-                            {retryingIds.has(job.id) ? '...' : 'Retry'}
+                            {retryingIds.has(job.id) ? '...' : 'Thử lại'}
                           </Button>
                         )}
                         {job.status === 'issued' && (

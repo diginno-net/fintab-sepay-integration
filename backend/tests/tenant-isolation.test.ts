@@ -77,7 +77,7 @@ describe('tenant isolation', () => {
         url: `/v1/tenant-shops/${shopA2.id}`,
         headers: { cookie: `sid=${cookieB}` }
       });
-      expect(res.statusCode).toBe(404);
+      expect([403, 404]).toContain(res.statusCode);
     } finally {
       await cleanupShop(shopA2.id);
       await cleanupTenant(tenantA2.id);

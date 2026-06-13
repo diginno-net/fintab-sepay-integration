@@ -19,6 +19,8 @@ export type AuditLogFilters = {
   action?: string;
   shopId?: string;
   resource?: string;
+  fromDate?: string;
+  toDate?: string;
   limit?: number;
 };
 

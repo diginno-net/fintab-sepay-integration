@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fintab_sepay_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/fintab_sepay_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/fintab_sepay_test
+      SESSION_SECRET: test-session-secret-change-me-123456
+      ENCRYPTION_MASTER_KEY: test-encryption-key-change-me-123456
+      CORS_ORIGIN: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - run: npm --prefix backend run db:migrate
+      - run: npm --prefix backend run typecheck
+      - run: npm --prefix backend test
+      - run: npm --prefix backend run test:integration
+      - run: npm --prefix frontend run typecheck
+      - run: npm --prefix frontend test
+      - run: npm --prefix frontend run build

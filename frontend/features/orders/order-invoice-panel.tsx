@@ -7,6 +7,7 @@ import { listInvoiceJobsClient, getInvoiceJobClient } from '@/features/invoices/
 import { downloadArtifact } from '@/features/invoices/download-artifact';
 import { apiFetch } from '@/lib/api/client';
 import Link from 'next/link';
+import { invoiceStatus } from '@/features/operations/status-labels';
 
 type InvoiceJob = {
   id: string;
@@ -24,19 +25,6 @@ type OrderInvoicePanelProps = {
   orderId: string;
   shopId: string;
   className?: string;
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  draft_create_queued: 'Đang tạo nháp',
-  draft_create_polling: 'Đang tạo nháp',
-  draft_create_running: 'Đang tạo nháp',
-  draft_created: 'Nháp xong',
-  issue_queued: 'Đang phát hành',
-  issue_polling: 'Đang phát hành',
-  issue_running: 'Đang phát hành',
-  issued: 'Đã phát hành',
-  failed: 'Thất bại',
-  timeout: 'Hết giờ',
 };
 
 export function OrderInvoicePanel({ orderId, shopId, className = '' }: OrderInvoicePanelProps) {
@@ -107,13 +95,7 @@ export function OrderInvoicePanel({ orderId, shopId, className = '' }: OrderInvo
                     <span className="font-mono text-sm font-semibold text-zinc-900">
                       {job.invoice_type === 'gtgt' ? 'GTGT' : 'Bán hàng'}
                     </span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      job.status === 'issued' ? 'bg-emerald-100 text-emerald-800' :
-                      job.status === 'failed' ? 'bg-red-100 text-red-700' :
-                      'bg-amber-100 text-amber-700'
-                    }`}>
-                      {STATUS_LABELS[job.status] || job.status}
-                    </span>
+                    <Badge tone={invoiceStatus(job.status).tone}>{invoiceStatus(job.status).label}</Badge>
                   </div>
                   {job.invoice_number && (
                     <p className="font-mono text-xs text-zinc-500">

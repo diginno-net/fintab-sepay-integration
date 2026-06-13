@@ -4,7 +4,7 @@ import { assertProviderTemplateSeriesAvailable } from '../sepay/provider-templat
 import { buildPollResult } from '../sepay/sepay-response-utils.js';
 import { downloadInvoiceNormalized } from '../sepay/sepay-download.service.js';
 import { SEPAY_ERROR_CODES } from '../sepay/sepay.errors.js';
-import { getInvoiceJob, updateInvoiceJobStatus } from '../invoices/invoice-job.service.js';
+import { enqueueAutoIssueIfAllowed, getInvoiceJob, updateInvoiceJobStatus } from '../invoices/invoice-job.service.js';
 
 type ProviderResponse = Record<string, unknown>;
 
@@ -29,12 +29,14 @@ export async function handleCreateDraft(tenantId: string, invoiceJobId: string) 
 
   const pollResult = buildPollResult(response);
   if (pollResult.success || pollResult.referenceCode) {
-    return updateInvoiceJobStatus(tenantId, invoiceJobId, {
+    const updated = await updateInvoiceJobStatus(tenantId, invoiceJobId, {
       status: 'draft_created',
       sepayCreateTrackingCode: pollResult.trackingCode || null,
       sepayReferenceCode: pollResult.referenceCode || null,
       responseJson: { create: response }
     });
+    await tryAutoIssue(tenantId, invoiceJobId);
+    return updated;
   }
 
   if (!pollResult.trackingCode) {
@@ -47,14 +49,6 @@ export async function handleCreateDraft(tenantId: string, invoiceJobId: string) 
 
   const checkedResponse = await shortPollCreate(context, pollResult.trackingCode);
   const checkedResult = buildPollResult(checkedResponse);
-  if (checkedResult.success || checkedResult.referenceCode) {
-    return updateInvoiceJobStatus(tenantId, invoiceJobId, {
-      status: 'draft_created',
-      sepayCreateTrackingCode: pollResult.trackingCode,
-      sepayReferenceCode: checkedResult.referenceCode || null,
-      responseJson: { create: response, poll: checkedResponse }
-    });
-  }
   if (checkedResult.failed) {
     return updateInvoiceJobStatus(tenantId, invoiceJobId, {
       status: 'failed',
@@ -62,6 +56,16 @@ export async function handleCreateDraft(tenantId: string, invoiceJobId: string) 
       responseJson: { create: response, poll: checkedResponse },
       errorJson: { message: checkedResult.message, code: SEPAY_ERROR_CODES.CREATE_POLL_FAILED }
     });
+  }
+  if (checkedResult.success || checkedResult.referenceCode) {
+    const updated = await updateInvoiceJobStatus(tenantId, invoiceJobId, {
+      status: 'draft_created',
+      sepayCreateTrackingCode: pollResult.trackingCode,
+      sepayReferenceCode: checkedResult.referenceCode || null,
+      responseJson: { create: response, poll: checkedResponse }
+    });
+    await tryAutoIssue(tenantId, invoiceJobId);
+    return updated;
   }
   return updateInvoiceJobStatus(tenantId, invoiceJobId, {
     status: 'draft_create_polling',
@@ -90,13 +94,19 @@ export async function handlePollCreate(tenantId: string, invoiceJobId: string) {
   const invoiceJob = await getInvoiceJob(tenantId, invoiceJobId);
   if (!invoiceJob.sepay_create_tracking_code) throw new AppError('VALIDATION_ERROR', 'Missing SePay create tracking code', 400);
   const response = await withSepayRetry(tenantId, invoiceJob.tenant_shop_id, client => client.checkCreateStatus(invoiceJob.sepay_create_tracking_code!)) as ProviderResponse;
-  const normalized = normalizeProviderStatus(response);
-  return updateInvoiceJobStatus(tenantId, invoiceJobId, {
-    status: normalized === 'success' ? 'draft_created' : normalized === 'failed' ? 'failed' : 'draft_create_polling',
-    sepayReferenceCode: stringValue(response.reference_code ?? response.referenceCode),
+  const result = buildPollResult(response);
+  const updated = await updateInvoiceJobStatus(tenantId, invoiceJobId, {
+    status: result.success || result.referenceCode ? 'draft_created' : result.failed ? 'failed' : 'draft_create_polling',
+    sepayReferenceCode: result.referenceCode || null,
     responseJson: { check_create: response },
-    errorJson: normalized === 'failed' ? response : null
+    errorJson: result.failed ? { message: result.message, code: SEPAY_ERROR_CODES.CREATE_POLL_FAILED } : null
   });
+  if (updated.status === 'draft_created') await tryAutoIssue(tenantId, invoiceJobId);
+  return updated;
+}
+
+async function tryAutoIssue(tenantId: string, invoiceJobId: string): Promise<void> {
+  await enqueueAutoIssueIfAllowed({ tenantId, invoiceJobId }).catch(() => undefined);
 }
 
 export async function handleIssue(tenantId: string, invoiceJobId: string) {
@@ -157,14 +167,14 @@ export async function handlePollIssue(tenantId: string, invoiceJobId: string) {
   const invoiceJob = await getInvoiceJob(tenantId, invoiceJobId);
   if (!invoiceJob.sepay_issue_tracking_code) throw new AppError('VALIDATION_ERROR', 'Missing SePay issue tracking code', 400);
   const response = await withSepayRetry(tenantId, invoiceJob.tenant_shop_id, client => client.checkIssueStatus(invoiceJob.sepay_issue_tracking_code!)) as ProviderResponse;
-  const normalized = normalizeProviderStatus(response);
+  const result = buildPollResult(response);
   return updateInvoiceJobStatus(tenantId, invoiceJobId, {
-    status: normalized === 'success' ? 'issued' : normalized === 'failed' ? 'failed' : 'issue_polling',
-    invoiceNumber: stringValue(response.invoice_number ?? response.invoiceNumber),
+    status: result.success || result.invoiceNumber ? 'issued' : result.failed ? 'failed' : 'issue_polling',
+    invoiceNumber: result.invoiceNumber || null,
     responseJson: { check_issue: response },
-    downloadAvailable: normalized === 'success' ? true : null,
-    issuedAt: normalized === 'success' ? new Date() : null,
-    errorJson: normalized === 'failed' ? response : null
+    downloadAvailable: result.success || result.invoiceNumber ? true : null,
+    issuedAt: result.success || result.invoiceNumber ? new Date() : null,
+    errorJson: result.failed ? { message: result.message, code: SEPAY_ERROR_CODES.ISSUE_POLL_FAILED } : null
   });
 }
 
@@ -220,17 +230,4 @@ export async function handleRefresh(tenantId: string, invoiceJobId: string) {
   }
 
   return updateInvoiceJobStatus(tenantId, invoiceJobId, patch);
-}
-
-function normalizeProviderStatus(response: ProviderResponse): 'success' | 'failed' | 'pending' {
-  const raw = String(response.status ?? response.state ?? '').toLowerCase();
-  if (['success', 'succeeded', 'done', 'completed'].includes(raw)) return 'success';
-  if (['failed', 'fail', 'error'].includes(raw)) return 'failed';
-  return 'pending';
-}
-
-function stringValue(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  const text = String(value).trim();
-  return text ? text : null;
 }

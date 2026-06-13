@@ -9,8 +9,8 @@ export default async function TaxSettingsPage({ params }: { params: Promise<{ sh
 
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow="Tax" title="Tax defaults" description="VAT mặc định và policy sản phẩm chưa map thuế." />
-      <SectionCard title="Default mapping"><TaxDefaultsForm shopId={shopId} defaults={defaults} /></SectionCard>
+      <PageHeader eyebrow="Thuế" title="Thuế mặc định" description="VAT mặc định và chính sách xử lý sản phẩm chưa map thuế." />
+      <SectionCard title="Mapping mặc định"><TaxDefaultsForm shopId={shopId} defaults={defaults} /></SectionCard>
     </div>
   );
 }

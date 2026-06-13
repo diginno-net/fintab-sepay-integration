@@ -30,3 +30,38 @@ export class SepayError extends Error {
     this.name = 'SepayError';
   }
 }
+
+export function humanizeSepayError(error: SepayError): string {
+  const providerMessage = extractProviderMessage(error.details);
+
+  if (error.code === SEPAY_ERROR_CODES.TOKEN_ERROR && error.statusCode === 401) {
+    return 'Thông tin xác thực SePay không hợp lệ. Vui lòng kiểm tra Client ID, Client Secret và môi trường Sandbox/Production.';
+  }
+
+  if (error.code === SEPAY_ERROR_CODES.TOKEN_ERROR) {
+    return providerMessage
+      ? `Không lấy được token SePay: ${providerMessage}`
+      : 'Không lấy được token SePay. Vui lòng kiểm tra cấu hình SePay.';
+  }
+
+  if (error.code === SEPAY_ERROR_CODES.DOWNLOAD_NOT_READY) {
+    return providerMessage
+      ? `SePay chưa trả file hóa đơn: ${providerMessage}`
+      : 'PDF/XML chưa sẵn sàng từ SePay. Vui lòng bấm Làm mới rồi thử lại.';
+  }
+
+  return providerMessage ? `${error.message}: ${providerMessage}` : error.message;
+}
+
+function extractProviderMessage(details: unknown): string | null {
+  if (!details || typeof details !== 'object') return null;
+  const root = details as Record<string, unknown>;
+  const direct = root.message;
+  if (typeof direct === 'string' && direct.trim()) return direct.trim();
+  const error = root.error;
+  if (error && typeof error === 'object') {
+    const message = (error as Record<string, unknown>).message;
+    if (typeof message === 'string' && message.trim()) return message.trim();
+  }
+  return null;
+}

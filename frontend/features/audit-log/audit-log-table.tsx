@@ -11,8 +11,9 @@ type Props = {
 
 export function AuditLogTable({ logs }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const safeLogs = logs ?? [];
 
-  if (logs.length === 0) {
+  if (safeLogs.length === 0) {
     return <p className="py-8 text-center text-sm text-zinc-500">Chưa có audit log.</p>;
   }
 
@@ -21,16 +22,16 @@ export function AuditLogTable({ logs }: Props) {
       <table className="w-full text-left text-sm">
         <thead className="text-xs uppercase tracking-[0.14em] text-zinc-500">
           <tr>
-            <th className="py-3 pr-4">Time</th>
-            <th className="py-3 pr-4">Actor</th>
-            <th className="py-3 pr-4">Type</th>
-            <th className="py-3 pr-4">Action</th>
-            <th className="py-3 pr-4">Resource</th>
-            <th className="py-3">Details</th>
+            <th className="py-3 pr-4">Thời gian</th>
+            <th className="py-3 pr-4">Tác nhân</th>
+            <th className="py-3 pr-4">Loại</th>
+            <th className="py-3 pr-4">Thao tác</th>
+            <th className="py-3 pr-4">Tài nguyên</th>
+            <th className="py-3">Chi tiết</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
-          {logs.map(log => (
+          {safeLogs.map(log => (
             <tr key={log.id} className="group">
               <td className="py-3 pr-4 font-mono text-xs text-zinc-500">{formatDate(log.created_at)}</td>
               <td className="py-3 pr-4">{log.actor}</td>
@@ -42,7 +43,7 @@ export function AuditLogTable({ logs }: Props) {
                   onClick={() => setExpanded(expanded === log.id ? null : log.id)}
                   className="text-xs text-emerald-700 hover:underline"
                 >
-                  {expanded === log.id ? 'Hide' : 'Show'}
+                  {expanded === log.id ? 'Ẩn' : 'Chi tiết kiểm toán'}
                 </button>
                 {expanded === log.id && log.diff && (
                   <pre className="mt-2 max-h-48 overflow-auto rounded-xl bg-zinc-950 p-3 text-xs text-zinc-100">

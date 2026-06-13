@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requirePermission } from '../../shared/auth/rbac-middleware.js';
 import { validateBody, validateParams } from '../../shared/http/validate.js';
 import { getProductTaxProfile, getShopTaxDefaults, upsertProductTaxProfile, upsertShopTaxDefaults } from './tax-profile.service.js';
+import { assertUserCanAccessShopForAction } from '../tenant/shop-access.service.js';
 
 const productParamsSchema = z.object({ id: z.string().uuid() });
 const shopParamsSchema = z.object({ shopId: z.string().uuid() });
@@ -24,22 +25,27 @@ const taxDefaultsSchema = z.object({
 export async function registerTaxRoutes(app: FastifyInstance): Promise<void> {
   app.get('/v1/products/:id/tax-profile', { preHandler: requirePermission('products:read') }, async request => {
     const { id } = validateParams(request, productParamsSchema);
-    return { data: await getProductTaxProfile(request.user!.tenantId, id) };
+    const profile = await getProductTaxProfile(request.user!.tenantId, id) as { tenant_shop_id?: string | null } | null;
+    if (profile?.tenant_shop_id) await assertUserCanAccessShopForAction({ tenantId: request.user!.tenantId, userId: request.user!.id, shopId: profile.tenant_shop_id, action: 'tax:read' });
+    return { data: profile };
   });
 
   app.put('/v1/products/:id/tax-profile', { preHandler: requirePermission('products:import') }, async request => {
     const { id } = validateParams(request, productParamsSchema);
     const body = validateBody(request, taxProfileSchema);
+    if (body.tenantShopId) await assertUserCanAccessShopForAction({ tenantId: request.user!.tenantId, userId: request.user!.id, shopId: body.tenantShopId, action: 'tax:write' });
     return { data: await upsertProductTaxProfile(request.user!.tenantId, id, body) };
   });
 
   app.get('/v1/shops/:shopId/tax/defaults', { preHandler: requirePermission('integration:read') }, async request => {
     const { shopId } = validateParams(request, shopParamsSchema);
+    await assertUserCanAccessShopForAction({ tenantId: request.user!.tenantId, userId: request.user!.id, shopId, action: 'tax:read' });
     return { data: await getShopTaxDefaults(request.user!.tenantId, shopId) };
   });
 
   app.put('/v1/shops/:shopId/tax/defaults', { preHandler: requirePermission('integration:write') }, async request => {
     const { shopId } = validateParams(request, shopParamsSchema);
+    await assertUserCanAccessShopForAction({ tenantId: request.user!.tenantId, userId: request.user!.id, shopId, action: 'tax:write' });
     const body = validateBody(request, taxDefaultsSchema);
     return { data: await upsertShopTaxDefaults(request.user!.tenantId, shopId, body) };
   });

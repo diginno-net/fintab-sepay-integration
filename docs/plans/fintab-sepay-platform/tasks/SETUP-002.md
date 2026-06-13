@@ -1,7 +1,7 @@
 # Task: SETUP-002 - Configure backend tooling
 
 ## Metadata
-- Status: pending
+- Status: historical-superseded
 - Estimate: 45m
 - Depends on: SETUP-001
 
@@ -12,13 +12,13 @@
 - backend lint/test config files CREATE
 
 ## Description
-Set up the backend TypeScript project for Fastify, PostgreSQL, Zod, OpenAPI, pg-boss and tests.
+Set up the backend TypeScript project for Fastify, PostgreSQL, Zod, OpenAPI, the current custom PostgreSQL job queue, and tests.
 
 ## Requirements
 - Add Node.js 20+ TypeScript tooling.
 - Add scripts for dev, build, typecheck, test and lint.
 - Add dependencies needed for backend platform foundation.
-- Include pg-boss-compatible dependencies.
+- Include dependencies needed by the current custom PostgreSQL `background_jobs` queue. pg-boss is deferred.
 
 ## Verification
 ```bash

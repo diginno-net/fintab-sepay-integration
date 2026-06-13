@@ -43,9 +43,9 @@ function PaymentInfo({ order }: { order: Order }) {
   const p = extractPayment(order as Parameters<typeof extractPayment>[0]);
   return (
     <Section title="Thanh toán">
-      <InfoRow label="Tổng tiền" value={<span className="font-semibold">{p.totalPrice} {p.currency}</span>} />
+      <InfoRow label="Tổng tiền" value={<span className="font-semibold">{p.totalPrice}</span>} />
       <InfoRow label="Sau giảm giá" value={p.afterDiscount} />
-      <InfoRow label="Cần thu (COD)" value={<span className="text-emerald-700 font-semibold">{p.moneyToCollect} {p.currency}</span>} />
+      <InfoRow label="Cần thu (COD)" value={<span className="text-emerald-700 font-semibold">{p.moneyToCollect}</span>} />
       <InfoRow label="Tiền mặt" value={p.cash} />
       <InfoRow label="Chuyển khoản" value={p.transfer} />
       <InfoRow label="Đã thanh toán trước" value={p.prepaid} />
@@ -141,7 +141,7 @@ function RawData({ order }: { order: Order }) {
   return (
     <details className="rounded-2xl border border-zinc-200 bg-white">
       <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-zinc-500 hover:text-zinc-700">
-        Raw JSON (debug)
+        Dữ liệu kỹ thuật
       </summary>
       <pre className="max-h-96 overflow-auto px-5 pb-4 text-xs text-zinc-400">
         {JSON.stringify(order, null, 2)}

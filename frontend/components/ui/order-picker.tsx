@@ -136,7 +136,7 @@ export function OrderPicker({ shopId, value, onChange, placeholder = 'Tìm kiế
                   <p className="text-xs text-zinc-500">{orderCustomerName(order)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-zinc-900">{orderTotal(order)} đ</p>
+                  <p className="text-sm font-medium text-zinc-900">{orderTotal(order)}</p>
                   <p className="text-xs text-zinc-500">{orderDate(order)}</p>
                 </div>
               </button>

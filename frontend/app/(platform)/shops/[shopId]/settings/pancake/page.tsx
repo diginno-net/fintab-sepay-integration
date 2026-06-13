@@ -9,8 +9,8 @@ export default async function PancakeSettingsPage({ params }: { params: Promise<
 
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow="Pancake" title="Pancake config" description="API key, shop ID và webhook secret theo shop." />
-      <SectionCard title="Credentials"><PancakeConfigForm shopId={shopId} config={config} /></SectionCard>
+      <PageHeader eyebrow="Pancake" title="Cấu hình Pancake" description="API key, shop ID và webhook secret theo cửa hàng." />
+      <SectionCard title="Thông tin kết nối"><PancakeConfigForm shopId={shopId} config={config} /></SectionCard>
     </div>
   );
 }

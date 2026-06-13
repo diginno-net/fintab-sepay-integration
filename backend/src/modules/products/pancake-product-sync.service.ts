@@ -80,6 +80,7 @@ export async function syncPancakeProductsForShop(params: {
 
         await upsertProduct({
           tenantId,
+          shopId,
           source: mapped.source,
           sourceProductCode: mapped.sourceProductCode,
           productName: mapped.productName,

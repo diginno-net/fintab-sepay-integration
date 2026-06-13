@@ -95,11 +95,11 @@ export function DataTable<T>({
 
   if (loading) {
     return (
-      <div className={`rounded-xl border border-zinc-200 bg-white ${className}`}>
+      <div className={`rounded-[1.35rem] border border-line bg-surface shadow-warm-sm ${className}`}>
         <div className="animate-pulse p-4">
-          <div className="mb-4 h-10 rounded bg-zinc-100" />
+          <div className="mb-4 h-10 rounded-xl bg-surface-muted" />
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="mb-3 h-12 rounded bg-zinc-100" />
+            <div key={i} className="mb-3 h-12 rounded-xl bg-surface-muted/80" />
           ))}
         </div>
       </div>
@@ -108,25 +108,25 @@ export function DataTable<T>({
 
   if (data.length === 0 && emptyState) {
     return (
-      <div className={`rounded-xl border border-zinc-200 bg-white ${className}`}>
+      <div className={`rounded-[1.35rem] border border-line bg-surface shadow-warm-sm ${className}`}>
         {emptyState}
       </div>
     );
   }
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-zinc-200 bg-white ${className}`}>
+    <div className={`overflow-hidden rounded-[1.35rem] border border-line bg-surface shadow-warm-sm ${className}`}>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-zinc-200 bg-zinc-50">
+            <tr className="border-b border-line bg-surface-muted/75">
               {selectable && (
                 <th className="w-12 px-4 py-3">
                   <input
                     type="checkbox"
                     checked={data.length > 0 && selectedIds.size === data.length}
                     onChange={handleSelectAll}
-                    className="h-4 w-4 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-700"
+                    className="size-4 rounded border-line text-accent focus:ring-accent"
                   />
                 </th>
               )}
@@ -134,8 +134,8 @@ export function DataTable<T>({
               {columns.map((col) => (
                 <th
                   key={col.id}
-                  className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 ${
-                    col.sortable ? 'cursor-pointer select-none hover:text-zinc-700' : ''
+                  className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-muted ${
+                    col.sortable ? 'cursor-pointer select-none hover:text-ink' : ''
                   }`}
                   style={{ width: col.width }}
                   onClick={() => col.sortable && handleSort(col.id)}
@@ -143,14 +143,14 @@ export function DataTable<T>({
                   <div className="flex items-center gap-1">
                     {col.header}
                     {col.sortable && sortColumn === col.id && (
-                      <span className="text-emerald-700">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      <span className="text-accent">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-line/70">
             {data.map((row) => {
               const rowId = getRowId(row);
               const isSelected = selectedIds.has(rowId);
@@ -161,7 +161,7 @@ export function DataTable<T>({
                   <tr
                     key={rowId}
                     className={`transition-colors ${
-                      isSelected ? 'bg-emerald-50' : 'hover:bg-zinc-50'
+                      isSelected ? 'bg-accent/10' : 'hover:bg-surface-muted/55'
                     }`}
                   >
                     {selectable && (
@@ -170,7 +170,7 @@ export function DataTable<T>({
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleSelectRow(rowId)}
-                          className="h-4 w-4 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-700"
+                          className="size-4 rounded border-line text-accent focus:ring-accent"
                         />
                       </td>
                     )}
@@ -178,20 +178,20 @@ export function DataTable<T>({
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleToggleExpand(rowId)}
-                          className="text-zinc-500 hover:text-zinc-700"
+                            className="rounded-lg px-2 py-1 text-muted transition hover:bg-surface-muted hover:text-ink"
                         >
                           {isExpanded ? '−' : '+'}
                         </button>
                       </td>
                     )}
                     {columns.map((col) => (
-                      <td key={col.id} className="px-4 py-3 text-sm text-zinc-900">
+                      <td key={col.id} className="px-4 py-3 text-sm text-ink">
                         {col.accessor(row)}
                       </td>
                     ))}
                   </tr>
                   {expandable && isExpanded && renderExpandedRow && (
-                    <tr key={`${rowId}-expanded`} className="bg-zinc-50">
+                    <tr key={`${rowId}-expanded`} className="bg-surface-muted/55">
                       <td colSpan={columns.length + (selectable ? 2 : 1)} className="px-4 py-3">
                         {renderExpandedRow(row)}
                       </td>
@@ -205,25 +205,25 @@ export function DataTable<T>({
       </div>
 
       {pagination && data.length > 0 && (
-        <div className="flex items-center justify-between border-t border-zinc-200 px-4 py-3">
-          <p className="text-sm text-zinc-500">
+        <div className="flex flex-col gap-3 border-t border-line px-4 py-3 md:flex-row md:items-center md:justify-between">
+          <p className="font-mono text-sm text-muted tabular-nums">
             Hiển thị {startItem}–{endItem} của {pagination.total}
           </p>
           <div className="flex items-center gap-2">
             <button
               onClick={() => pagination.onPageChange(pagination.page - 1)}
               disabled={pagination.page <= 1}
-              className="rounded border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-9 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-muted transition hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
             >
               Trước
             </button>
-            <span className="text-sm text-zinc-500">
+            <span className="font-mono text-sm text-muted tabular-nums">
               Trang {pagination.page} / {totalPages}
             </span>
             <button
               onClick={() => pagination.onPageChange(pagination.page + 1)}
               disabled={pagination.page >= totalPages}
-              className="rounded border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-9 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-muted transition hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
             >
               Sau
             </button>

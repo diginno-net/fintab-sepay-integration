@@ -13,8 +13,8 @@ export default async function ShopSettingsPage({ params }: { params: Promise<{ s
   ];
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow="Shop settings" title="Settings hub" description="Điều hướng cấu hình Pancake, SePay, webhook, tax và invoice rules." />
-      <SectionCard title="Settings tabs">
+      <PageHeader eyebrow="Cài đặt cửa hàng" title="Trung tâm cài đặt" description="Điều hướng cấu hình Pancake, SePay, webhook, thuế và quy tắc hóa đơn." />
+      <SectionCard title="Nhóm cài đặt">
         <div className="grid gap-3 md:grid-cols-3">
           {tabs.map(([label, href]) => <Link key={href} href={href} className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold transition hover:border-emerald-300">{label}</Link>)}
         </div>

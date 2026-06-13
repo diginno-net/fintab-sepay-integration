@@ -1,6 +1,7 @@
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 import { AppError, toErrorEnvelope } from './errors.js';
+import { humanizeSepayError, SepayError } from '../../modules/sepay/sepay.errors.js';
 
 export function errorHandler(error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply): void {
   const requestId = reply.getHeader('x-request-id')?.toString() ?? request.id;
@@ -12,6 +13,17 @@ export function errorHandler(error: FastifyError | Error, request: FastifyReques
 
   if (error instanceof ZodError) {
     const appError = new AppError('VALIDATION_ERROR', 'Validation failed', 400, error.flatten());
+    void reply.status(400).send(toErrorEnvelope(appError, requestId));
+    return;
+  }
+
+  if (error instanceof SepayError) {
+    const appError = new AppError('VALIDATION_ERROR', humanizeSepayError(error), 400, {
+      code: error.code,
+      statusCode: error.statusCode,
+      provider: 'sepay',
+      details: error.details
+    });
     void reply.status(400).send(toErrorEnvelope(appError, requestId));
     return;
   }

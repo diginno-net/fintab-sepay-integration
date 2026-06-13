@@ -16,57 +16,57 @@ vi.mock('../lib/api/client', () => ({
 }));
 
 describe('JobActions - button visibility by status', () => {
-  it('draft_create_queued: shows Refresh invoice, no Issue/PDF/Retry', () => {
+  it('draft_create_queued: shows refresh, no issue/PDF/retry', () => {
     render(<JobActions invoiceJobId="job-123" status="draft_create_queued" />);
-    expect(screen.getByRole('button', { name: /refresh invoice/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /issue/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /view pdf/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /download pdf/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /làm mới hóa đơn/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /phát hành/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /xem pdf/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /tải pdf/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /thử lại/i })).not.toBeInTheDocument();
   });
 
-  it('draft_create_polling: shows Refresh invoice, no Issue/PDF/Retry', () => {
+  it('draft_create_polling: shows refresh, no issue/PDF/retry', () => {
     render(<JobActions invoiceJobId="job-123" status="draft_create_polling" />);
-    expect(screen.getByRole('button', { name: /refresh invoice/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /issue/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /view pdf/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /download pdf/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /làm mới hóa đơn/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /phát hành/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /xem pdf/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /tải pdf/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /thử lại/i })).not.toBeInTheDocument();
   });
 
-  it('draft_created: shows Refresh invoice, Issue, View PDF, Download PDF', () => {
+  it('draft_created: shows refresh, issue, view PDF, download PDF', () => {
     render(<JobActions invoiceJobId="job-123" status="draft_created" />);
-    expect(screen.getByRole('button', { name: /refresh invoice/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /issue/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /view pdf/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download pdf/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /làm mới hóa đơn/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /phát hành/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /xem pdf/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /tải pdf/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /thử lại/i })).not.toBeInTheDocument();
   });
 
-  it('issued: shows View PDF and Download PDF, no Refresh/Issue/Retry', () => {
+  it('issued: shows view PDF and download PDF, no refresh/issue/retry', () => {
     render(<JobActions invoiceJobId="job-123" status="issued" />);
-    expect(screen.queryByRole('button', { name: /refresh invoice/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /issue/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /view pdf/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download pdf/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /làm mới hóa đơn/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /phát hành/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /xem pdf/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /tải pdf/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /thử lại/i })).not.toBeInTheDocument();
   });
 
-  it('failed: shows Refresh invoice and Retry, no PDF/Issue', () => {
+  it('failed: shows retry, no PDF/issue', () => {
     render(<JobActions invoiceJobId="job-123" status="failed" />);
-    expect(screen.queryByRole('button', { name: /refresh invoice/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /view pdf/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /download pdf/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /issue/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /làm mới hóa đơn/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /thử lại/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /xem pdf/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /tải pdf/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /phát hành/i })).not.toBeInTheDocument();
   });
 
-  it('timeout: shows Refresh invoice and Retry', () => {
+  it('timeout: shows retry', () => {
     render(<JobActions invoiceJobId="job-123" status="timeout" />);
-    expect(screen.queryByRole('button', { name: /refresh invoice/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /view pdf/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /download pdf/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /làm mới hóa đơn/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /thử lại/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /xem pdf/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /tải pdf/i })).not.toBeInTheDocument();
   });
 
   it('displays status label', () => {

@@ -4,6 +4,8 @@ export type NormalizedBuyer = {
   email: string | null;
   address: string | null;
   taxCode: string | null;
+  companyName: string | null;
+  identityNumber: string | null;
 };
 
 export type NormalizedOrderItem = {
@@ -25,6 +27,7 @@ export type NormalizedOrderItem = {
     name?: string | null;
     product_name?: string | null;
     retail_price?: string | number | null;
+    tax_rate?: string | number | null;
     measure_info?: { name?: string | null };
   } | null;
 };
@@ -71,6 +74,9 @@ export function normalizeBuyer(order: Record<string, unknown>): NormalizedBuyer 
     : {};
 
   const phoneNumbers = Array.isArray(customer.phone_numbers) ? customer.phone_numbers : [];
+  const companyInfo = typeof customer.company_info === 'object' && customer.company_info !== null
+    ? customer.company_info as Record<string, unknown>
+    : {};
 
   return {
     name: str(order.bill_full_name)
@@ -84,8 +90,13 @@ export function normalizeBuyer(order: Record<string, unknown>): NormalizedBuyer 
       ?? (Array.isArray(customer.emails) ? str(customer.emails[0]) : null),
     address: str(shippingAddress.full_address)
       ?? str(shippingAddress.address),
-    taxCode: str(customer.tax_code ?? customer.identity_code)
+    taxCode: str(customer.tax_code)
+      ?? str(companyInfo.tax_code)
       ?? str(order.tax_code)
+      ?? null,
+    companyName: str(companyInfo.company_name ?? companyInfo.name ?? customer.company_name)
+      ?? null,
+    identityNumber: str(customer.identity_code ?? customer.identity_number)
       ?? null
   };
 }
@@ -124,9 +135,9 @@ export function normalizeOrderItem(item: Record<string, unknown>): NormalizedOrd
     ? rawVi as Record<string, unknown>
     : {} as Record<string, unknown>;
 
-  const displayId = str(vi.display_id ?? vi.product_display_id);
+  const displayId = str(item.item_code ?? item.product_code ?? vi.display_id ?? vi.product_display_id);
   const barcode = str(vi.barcode ?? item.barcode);
-  const variationId = str(item.variation_id ?? item.variation_id);
+  const variationId = str(item.variation_id ?? item.id);
   const productId = str(item.product_id);
 
   const viMeasureInfo = vi.measure_info as Record<string, unknown> | undefined;
@@ -135,20 +146,21 @@ export function normalizeOrderItem(item: Record<string, unknown>): NormalizedOrd
     productId,
     variationId,
     itemCode: displayId ?? barcode ?? variationId ?? productId,
-    itemName: str(vi.name ?? item.product_name ?? item.name),
+    itemName: str(vi.name ?? vi.product_name ?? item.item_name ?? item.product_name ?? item.name),
     barcode,
     quantity: num(item.quantity) ?? 1,
-    unitPrice: num(vi.retail_price ?? item.retail_price ?? item.price) ?? 0,
-    totalDiscount: num(item.total_discount ?? item.discount_each_product) ?? 0,
+    unitPrice: num(item.unit_price ?? vi.retail_price ?? item.retail_price ?? item.price) ?? 0,
+    totalDiscount: num(item.discount_amount ?? item.total_discount ?? item.discount_each_product) ?? 0,
     retailPrice: num(vi.retail_price) ?? num(item.retail_price) ?? 0,
-    unit: str(viMeasureInfo?.name) ?? 'cái',
+    unit: str(item.unit ?? viMeasureInfo?.name) ?? 'cái',
     note: str(item.note_product ?? item.note),
     variation_info: vi as NormalizedOrderItem['variation_info']
   };
 }
 
 export function normalizeOrderItems(order: Record<string, unknown>): NormalizedOrderItem[] {
-  const items = order.items;
+  const candidates = [order.items, order.order_items, order.products, order.variations];
+  const items = candidates.find(Array.isArray);
   if (!Array.isArray(items)) return [];
   return items.map(item => normalizeOrderItem(item as Record<string, unknown>));
 }

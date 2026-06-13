@@ -7,6 +7,8 @@ export type SessionShop = {
   id: string;
   name: string;
   status: string;
+  accessLevel: 'owner' | 'admin' | 'member' | 'viewer';
+  isDefault: boolean;
   hasPancakeConfig: boolean;
   hasSepayConfig: boolean;
 };
@@ -39,6 +41,8 @@ export async function getCurrentSession(): Promise<Session | null> {
       ...session,
       shops: session.shops.map(shop => ({
         ...shop,
+        accessLevel: shop.accessLevel ?? (shop as unknown as { access_level?: SessionShop['accessLevel'] }).access_level ?? 'viewer',
+        isDefault: shop.isDefault ?? (shop as unknown as { is_default?: boolean }).is_default ?? false,
         hasPancakeConfig: shop.hasPancakeConfig ?? (shop as unknown as { has_pancake_config?: boolean }).has_pancake_config ?? false,
         hasSepayConfig: shop.hasSepayConfig ?? (shop as unknown as { has_sepay_config?: boolean }).has_sepay_config ?? false
       }))

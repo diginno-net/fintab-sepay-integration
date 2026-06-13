@@ -14,14 +14,14 @@ type StatCardProps = {
 
 const toneStyles = {
   neutral: {
-    border: 'border-zinc-200',
-    icon: 'text-zinc-500',
-    value: 'text-zinc-900'
+    border: 'border-line',
+    icon: 'text-muted',
+    value: 'text-ink'
   },
   success: {
-    border: 'border-emerald-200',
-    icon: 'text-emerald-600',
-    value: 'text-emerald-700'
+    border: 'border-accent/25',
+    icon: 'text-accent',
+    value: 'text-accent'
   },
   warning: {
     border: 'border-amber-200',
@@ -39,13 +39,13 @@ export function StatCard({ title, value, icon, tone = 'neutral', trend, classNam
   const styles = toneStyles[tone];
 
   return (
-    <div className={`rounded-xl border bg-white px-5 py-4 ${styles.border} ${className}`}>
+    <div className={`rounded-[1.35rem] border bg-surface px-5 py-4 shadow-warm-sm ${styles.border} ${className}`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500">{title}</p>
-          <p className={`mt-1 text-2xl font-bold ${styles.value}`}>{value}</p>
+          <p className="text-sm font-medium text-muted">{title}</p>
+          <p className={`mt-1 font-mono text-2xl font-semibold tracking-[-0.04em] tabular-nums ${styles.value}`}>{value}</p>
           {trend && (
-            <p className={`mt-1 text-xs font-medium ${trend.value >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            <p className={`mt-1 text-xs font-medium ${trend.value >= 0 ? 'text-accent' : 'text-red-600'}`}>
               {trend.value >= 0 ? '+' : ''}{trend.value}% {trend.label}
             </p>
           )}

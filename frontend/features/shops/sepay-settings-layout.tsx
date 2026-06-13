@@ -79,7 +79,7 @@ export function SepaySettingsLayout({ children, integrationStatus, notes, classN
             Nếu gặp lỗi khi phát hành hóa đơn, vui lòng kiểm tra:
           </p>
           <ul className="mt-2 space-y-1 text-sm text-zinc-600">
-            <li>• Client ID và Client Secret đúng</li>
+            <li>• API Client ID và Client Secret đúng môi trường Sandbox/Production</li>
             <li>• Tài khoản phát hành đã được kích hoạt</li>
             <li>• Template và Series đúng định dạng</li>
             <li>• Đã đủ hạn mức phát hành</li>

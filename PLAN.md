@@ -2620,3 +2620,6 @@ Error envelope:
 - Tactile active state on buttons: scale-[0.98] hoặc -translate-y-[1px].
 - Motion code has cleanup and isolated client boundaries.
 ```
+# Historical Note
+
+Some older sections in this file mention `pg-boss`. The active runtime queue is now the custom PostgreSQL `background_jobs` worker documented in `docs/backend-architecture.md`. Treat pg-boss references below as historical/deferred unless a future migration explicitly reintroduces it.

@@ -7,15 +7,19 @@ export type Role = 'owner' | 'admin' | 'accountant' | 'operator' | 'viewer';
 
 export type AuthUser = {
   id: string;
+  sessionId: string;
   email: string;
   name: string;
   tenantId: string;
   role: Role;
+  currentShopId: string | null;
 };
 
 export type SessionRow = {
+  session_id: string;
   user_id: string;
   tenant_id: string;
+  current_tenant_shop_id: string | null;
   email: string;
   name: string;
   role: Role;
@@ -40,7 +44,7 @@ export async function resolveAuthUser(request: FastifyRequest): Promise<AuthUser
   if (!token) return null;
 
   const rows = await query<SessionRow>(
-    `SELECT s.user_id, s.tenant_id, u.email, u.name, m.role
+    `SELECT s.id AS session_id, s.user_id, s.tenant_id, s.current_tenant_shop_id, u.email, u.name, m.role
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      JOIN memberships m ON m.tenant_id = s.tenant_id AND m.user_id = s.user_id
@@ -53,7 +57,9 @@ export async function resolveAuthUser(request: FastifyRequest): Promise<AuthUser
   if (!row) return null;
   return {
     id: row.user_id,
+    sessionId: row.session_id,
     tenantId: row.tenant_id,
+    currentShopId: row.current_tenant_shop_id,
     email: row.email,
     name: row.name,
     role: row.role

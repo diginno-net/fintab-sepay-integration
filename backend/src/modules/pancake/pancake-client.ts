@@ -1,4 +1,5 @@
 import { redactUrl } from '../../shared/observability/redaction.js';
+import type { PancakeOrderListQuery } from './pancake-order-filter.js';
 
 export type PancakeClientOptions = {
   baseUrl?: string;
@@ -8,7 +9,7 @@ export type PancakeClientOptions = {
 };
 
 export type PancakeRequestOptions = {
-  query?: Record<string, string | number | boolean | undefined>;
+  query?: Record<string, string | number | boolean | Array<string | number | boolean> | undefined>;
 };
 
 export class PancakeApiError extends Error {
@@ -40,7 +41,7 @@ export class PancakeClient {
     return this.get(`/shops/${this.shopId}/orders`, { query: { page_size: 1 } });
   }
 
-  async listOrders(query?: Record<string, string | number | boolean | undefined>): Promise<unknown> {
+  async listOrders(query?: PancakeOrderListQuery): Promise<unknown> {
     return this.get(`/shops/${this.shopId}/orders`, { query });
   }
 
@@ -48,7 +49,7 @@ export class PancakeClient {
     return this.get(`/shops/${this.shopId}/orders/${orderId}`);
   }
 
-  async listProducts(query?: Record<string, string | number | boolean | undefined>): Promise<unknown> {
+  async listProducts(query?: Record<string, string | number | boolean | Array<string | number | boolean> | undefined>): Promise<unknown> {
     return this.get(`/shops/${this.shopId}/products/variations`, { query });
   }
 
@@ -64,7 +65,12 @@ export class PancakeClient {
     const url = new URL(`${this.baseUrl}${path}`);
     url.searchParams.set('api_key', this.apiKey);
     for (const [key, value] of Object.entries(options.query ?? {})) {
-      if (value !== undefined) url.searchParams.set(key, String(value));
+      if (value === undefined) continue;
+      if (Array.isArray(value)) {
+        for (const item of value) url.searchParams.append(key, String(item));
+        continue;
+      }
+      url.searchParams.set(key, String(value));
     }
     return url;
   }

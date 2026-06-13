@@ -50,7 +50,7 @@ export function ProviderAccountPicker({ shopId, onAccountLoaded, onTemplateLoade
       setAccounts(items);
       if (items.length === 0) setError('Không tìm thấy tài khoản phát hành active.');
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Không tải được danh sách tài khoản.');
+      setError(formatSepayError(err, 'Không tải được danh sách tài khoản.'));
     } finally {
       setLoadingAccounts(false);
     }
@@ -66,7 +66,7 @@ export function ProviderAccountPicker({ shopId, onAccountLoaded, onTemplateLoade
       setTemplates(detail.templates ?? []);
       onAccountLoaded?.(accountId, detail.name);
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Không tải được chi tiết tài khoản.');
+      setError(formatSepayError(err, 'Không tải được chi tiết tài khoản.'));
     } finally {
       setLoadingDetail(false);
     }
@@ -132,6 +132,15 @@ export function ProviderAccountPicker({ shopId, onAccountLoaded, onTemplateLoade
       )}
     </div>
   );
+}
+
+function formatSepayError(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiClientError)) return fallback;
+  const details = error.details as { code?: string } | undefined;
+  if (details?.code === 'SEPAY_TOKEN_ERROR') {
+    return 'Không xác thực được với SePay. Kiểm tra API Client ID, Client Secret và môi trường Sandbox/Production.';
+  }
+  return error.message;
 }
 
 function extractArray(value: unknown): ProviderAccount[] {

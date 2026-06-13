@@ -27,7 +27,12 @@ export type MaskedSepayConfig = {
   id: string;
   provider: string;
   scope: string;
-  config: Record<string, unknown>;
+  config: Record<string, unknown> & {
+    dry_run?: boolean;
+    auto_create_invoice?: boolean;
+    auto_issue_invoice?: boolean;
+    require_accountant_confirmation_before_auto_issue?: boolean;
+  };
   has_client_id: boolean;
   has_client_secret: boolean;
   last_updated_at: string;

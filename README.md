@@ -73,13 +73,13 @@ Pancake POS (Webshop/POS)
                                   │
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    Background Worker (pg-boss)                       │
+│          Background Worker (custom PostgreSQL queue)                  │
 │     Invoice Creation │ Invoice Issuance │ Token Refresh │ Sync      │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                   PostgreSQL 16 + pg-boss                           │
+│             PostgreSQL 16 + background_jobs queue                    │
 │  tenants | users | orders | invoices | products | jobs | audit_logs │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -95,7 +95,7 @@ Pancake POS (Webshop/POS)
 | Fastify | 5.x | Web framework |
 | TypeScript | 5.x | Language |
 | PostgreSQL | 16 | Database |
-| pg-boss | 8.x | Job queue |
+| Custom PostgreSQL queue | - | Background job queue via `background_jobs` |
 | Zod | 3.x | Validation |
 | Vitest | 2.x | Testing |
 
@@ -147,7 +147,7 @@ fintab-sepay-integration/
 │   │   │   ├── observability/   # Logger, correlation ID
 │   │   │   ├── openapi/         # OpenAPI spec
 │   │   │   ├── persistence/     # Database connection
-│   │   │   └── queue/           # pg-boss queue
+│   │   │   └── queue/           # Custom PostgreSQL queue
 │   │   ├── app.ts             # Fastify app builder
 │   │   ├── server.ts          # HTTP server entry
 │   │   └── queue-worker.ts    # Background worker entry
@@ -308,7 +308,7 @@ pnpm --filter backend start
 | `shop_tax_defaults` | Shop-level tax defaults |
 | `invoice_jobs` | Invoice creation/issuance tracking |
 | `invoice_payload_snapshots` | Immutable order snapshots |
-| `background_jobs` | Job queue entries (pg-boss) |
+| `background_jobs` | Custom PostgreSQL job queue entries |
 | `webhook_inbox` | Webhook deduplication |
 | `audit_logs` | Full audit trail |
 | `sepay_token_cache` | SePay access token storage |
@@ -328,7 +328,7 @@ tenants ───< memberships >─── users
            ├──< webhook_inbox
            └──< audit_logs
 
-background_jobs (standalone - pg-boss)
+background_jobs (standalone custom PostgreSQL queue)
 sepay_token_cache (standalone)
 sessions (standalone - user auth)
 ```
@@ -373,7 +373,7 @@ sessions (standalone - user auth)
 - Line type mapping: goods, discounts, promotions, shipping
 
 ### 6. Background Job System
-- pg-boss + PostgreSQL cho reliable job queue
+- Custom PostgreSQL `background_jobs` queue cho reliable async workflows
 - Async workflows (non-blocking HTTP)
 - Retry logic với configurable max attempts
 - Job status polling và timeout handling

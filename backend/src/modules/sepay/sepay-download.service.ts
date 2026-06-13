@@ -1,4 +1,5 @@
 import { SepayEInvoiceClient } from './sepay-einvoice-client.js';
+import { SepayError, SEPAY_ERROR_CODES } from './sepay.errors.js';
 
 export type DownloadArtifact = {
   type: 'url' | 'base64' | 'binary';
@@ -17,7 +18,12 @@ export async function downloadInvoiceNormalized(
 
   if (!response.ok) {
     const text = await response.text().catch(() => '');
-    throw new Error(`SePay download failed: ${response.status} ${text}`.slice(0, 200));
+    throw new SepayError(
+      'SePay download failed',
+      response.status,
+      response.status === 404 ? SEPAY_ERROR_CODES.DOWNLOAD_NOT_READY : SEPAY_ERROR_CODES.API_ERROR,
+      parseDetails(text)
+    );
   }
 
   const contentDisposition = response.headers.get('content-disposition') ?? '';
@@ -34,6 +40,7 @@ export async function downloadInvoiceNormalized(
     if (url) return { type: 'url', url, contentType, filename };
     const data = extractDataFromJson(json, type);
     if (data) return { type: 'base64', data, contentType: type === 'pdf' ? 'application/pdf' : 'application/xml', filename };
+    throw new SepayError('SePay did not return a downloadable invoice file', 400, SEPAY_ERROR_CODES.DOWNLOAD_NOT_READY, json);
   }
 
   if (looksLikeUrl(text)) {
@@ -112,4 +119,13 @@ function isValidBase64(str: string): boolean {
   if (str.length < 10) return false;
   if (/^[A-Za-z0-9+/=]+$/.test(str)) return true;
   return false;
+}
+
+function parseDetails(text: string): unknown {
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return { raw: text.slice(0, 500) };
+  }
 }
